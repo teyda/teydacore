@@ -592,6 +592,7 @@ export interface VoiceChatScheduled {
  * This object represents a service message about a voice chat started in the chat. Currently holds no information.
  * @see https://core.telegram.org/bots/api#voicechatstarted
  */
+// deno-lint-ignore no-explicit-any
 export type VoiceChatStarted = any
 
 /**
@@ -1293,6 +1294,7 @@ export interface InputMediaDocument {
  * This object represents the contents of a file to be uploaded. Must be posted using multipart/form-data in the usual way that files are uploaded via the browser.
  * @see https://core.telegram.org/bots/api#inputfile
  */
+// deno-lint-ignore no-explicit-any
 export type InputFile = any
 
 export interface SendMessagePayload {

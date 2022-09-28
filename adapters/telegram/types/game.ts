@@ -40,6 +40,7 @@ export interface Game {
  * A placeholder, currently holds no information. Use BotFather to set up your game.
  * @see https://core.telegram.org/bots/api#callbackgame
  */
+// deno-lint-ignore no-explicit-any
 export type CallbackGame = any
 
 export interface SetGameScorePayload {
