@@ -4,6 +4,6 @@ export abstract class Adapter<T extends AdapterConfig = AdapterConfig> {
     abstract stop(): Promise<void> | void
 }
 
+// deno-lint-ignore no-empty-interface
 export interface AdapterConfig {
-    self_id: string
 }

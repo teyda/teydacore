@@ -1,41 +1,50 @@
 import {
     AllActions,
-    MetaResps,
     OneBot,
     OneBotConfig,
     UserMessageEvents,
     GroupMessageEvents,
     MetaEvents,
-    MessageResps,
-    ActionsDetail
+    ActionsDetail,
+    AllResps
 } from '../../deps.ts'
 import { Adapter, AdapterConfig } from "../../adapter.ts"
-import { Update, MessageEntity, Message } from './types/index.ts'
+import * as TelegramType from './types/index.ts'
 import { parseSegment, TelegramMessageSegments } from './seg.ts'
 import { VERSION } from '../../version.ts'
 
 export class Telegram extends Adapter {
     private ob: OneBot
-    private running = false
-    private online = false
+    public running = false
+    public online = false
     private offset = 0
-    private support_action = ['get_supported_actions', 'get_status', 'get_version', 'send_message']
-    constructor(public config: TelegramConfig) {
+    public readonly support_action = ['get_supported_actions', 'get_status', 'get_version', 'send_message', 'delete_message', 'get_self_info', 'get_user_info', 'get_group_info', 'get_group_member_info', 'set_group_name']
+    private ah = new ActionHandler(this)
+    public info: TelegramType.User | undefined
+    constructor(public readonly config: TelegramConfig) {
         super()
         this.ob = new OneBot(async (data) => {
             switch (data.action) {
-                case 'get_supported_actions': {
-                    return this.get_supported_actions(data)
-                }
-                case 'get_status': {
-                    return this.get_status(data)
-                }
-                case 'get_version': {
-                    return this.get_version(data)
-                }
-                case 'send_message': {
-                    return await this.send_message(data)
-                }
+                case 'get_supported_actions':
+                    return this.ah.getSupportedActions(data)
+                case 'get_status':
+                    return this.ah.getStatus(data)
+                case 'get_version':
+                    return this.ah.getVersion(data)
+                case 'send_message':
+                    return await this.ah.sendMessage(data)
+                case 'delete_message':
+                    return await this.ah.deleteMessage(data)
+                case 'get_self_info':
+                    return await this.ah.getSelfInfo(data)
+                case 'get_user_info':
+                    return await this.ah.getUserInfo(data)
+                case 'get_group_info':
+                    return await this.ah.getGroupInfo(data)
+                case 'get_group_member_info':
+                    return await this.ah.getGroupMemberInfo(data)
+                case 'set_group_name':
+                    return await this.ah.setGroupName(data)
                 default:
                     return {
                         status: "failed",
@@ -47,34 +56,163 @@ export class Telegram extends Adapter {
             }
         })
     }
-    private get_supported_actions(data: AllActions): MetaResps {
-        return {
-            status: "ok",
-            retcode: 0,
-            data: Object.keys(this.support_action),
-            message: "",
-            echo: data.echo ? data.echo : "",
+    private async polling() {
+        try {
+            const res = await fetch(
+                `https://api.telegram.org/bot${this.config.token}/getUpdates`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        timeout: 60000,
+                        offset: this.offset + 1,
+                    }),
+                },
+            )
+            const data = await res.json()
+            if (data.ok) {
+                for (const update of data.result) {
+                    this.offset = Math.max(this.offset, update.update_id)
+                    console.log(update)
+                    this.telegram_to_onebot(update)
+                }
+                this.change_online(true)
+            } else {
+                this.change_online(false)
+            }
+            this.polling()
+        } catch {
+            this.change_online(false)
+            setTimeout(this.polling, 500);
         }
     }
-    private get_status(data: AllActions): MetaResps {
-        return {
-            status: "ok",
-            retcode: 0,
-            data: {
+    public async start() {
+        try {
+            const res = await fetch(`https://api.telegram.org/bot${this.config.token}/getMe`)
+            const data = await res.json()
+            if (data.ok) {
+                this.info = data.result
+                this.running = true
+                this.ob.start({
+                    basic: {
+                        onebot_version: 12,
+                        impl: "teyda",
+                    },
+                    ...this.config.connect,
+                })
+                this.polling()
+            }
+        } catch {
+            setTimeout(this.start, 500)
+        }
+    }
+    private change_online(bool: boolean): void {
+        if (bool === this.online) return
+        this.online = bool
+        const event: MetaEvents = {
+            id: crypto.randomUUID(),
+            time: new Date().getTime() / 1000,
+            type: 'meta',
+            detail_type: 'status_update',
+            sub_type: '',
+            status: {
                 good: this.online && this.running,
                 bots: [{
                     self: {
                         platform: 'telegram',
-                        user_id: this.config.self_id
+                        user_id: this.info?.id?.toString()!
                     },
                     online: this.online
+                }]
+            }
+        }
+        this.ob.send(event)
+    }
+    private telegram_to_onebot(e: TelegramType.Update): void {
+        if (e.message) {
+            switch (e.message.chat?.type) {
+                case 'private': {
+                    const event: UserMessageEvents = {
+                        id: crypto.randomUUID(),
+                        self: {
+                            platform: 'telegram',
+                            user_id: this.info?.id?.toString()!
+                        },
+                        time: e.message.date!,
+                        type: 'message',
+                        detail_type: 'private',
+                        sub_type: '',
+                        message_id: `${e.message.chat.id}/${e.message.message_id}`,
+                        message: parseSegment(e.message),
+                        alt_message: e.message.text!,
+                        user_id: e.message.from?.id?.toString()!
+                    }
+                    this.ob.send(event)
+                    break
+                }
+                case 'supergroup':
+                case 'group': {
+                    const event: GroupMessageEvents = {
+                        id: crypto.randomUUID(),
+                        self: {
+                            platform: 'telegram',
+                            user_id: this.info?.id?.toString()!
+                        },
+                        time: e.message.date!,
+                        type: 'message',
+                        detail_type: 'group',
+                        sub_type: '',
+                        message_id: `${e.message.chat.id}/${e.message.message_id}`,
+                        message: parseSegment(e.message),
+                        alt_message: e.message.text!,
+                        user_id: e.message.from?.id?.toString()!,
+                        group_id: e.message.chat.id?.toString()!
+                    }
+                    this.ob.send(event)
+                    break
+                }
+            }
+        }
+    }
+    public stop() {
+        this.running = false
+        this.ob.shutdown()
+    }
+}
+
+class ActionHandler {
+    constructor(private tg: Telegram) {
+    }
+    getSupportedActions(data: AllActions): AllResps {
+        return {
+            status: "ok",
+            retcode: 0,
+            data: Object.keys(this.tg.support_action),
+            message: "",
+            echo: data.echo ? data.echo : "",
+        }
+    }
+    getStatus(data: AllActions): AllResps {
+        return {
+            status: "ok",
+            retcode: 0,
+            data: {
+                good: this.tg.online && this.tg.running,
+                bots: [{
+                    self: {
+                        platform: 'telegram',
+                        user_id: this.tg.info?.id?.toString()!
+                    },
+                    online: this.tg.online
                 }]
             },
             message: "",
             echo: data.echo ? data.echo : "",
         }
     }
-    private get_version(data: AllActions): MetaResps {
+    getVersion(data: AllActions): AllResps {
         return {
             status: "ok",
             retcode: 0,
@@ -87,7 +225,7 @@ export class Telegram extends Adapter {
             echo: data.echo ? data.echo : "",
         }
     }
-    private async send_message(data: ActionsDetail.SendMessage<TelegramMessageSegments>): Promise<MessageResps> {
+    async sendMessage(data: ActionsDetail.SendMessage<TelegramMessageSegments>): Promise<AllResps> {
         let method = 'sendMessage'
         const chat_id = data.params.user_id || data.params.group_id
         const payload: Record<string, unknown> = {
@@ -145,7 +283,7 @@ export class Telegram extends Adapter {
             }
         })
         let text_parsed = ""
-        const entities: MessageEntity[] = []
+        const entities: TelegramType.MessageEntity[] = []
         let offset = 0
         for (const seg of excludeReply) {
             switch (seg.type) {
@@ -175,150 +313,256 @@ export class Telegram extends Adapter {
             }
         }
         text_parsed !== '' && (payload.text = text_parsed)
-        const res = await fetch(
-            `https://api.telegram.org/bot${this.config.token}/${method}`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
+        try {
+            const res = await fetch(
+                `https://api.telegram.org/bot${this.tg.config.token}/${method}`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(payload),
                 },
-                body: JSON.stringify(payload),
-            },
-        )
-        const tg_resp = await res.json()
-        if (tg_resp.ok) {
-            const result: Message = tg_resp.result
+            )
+            const tg_resp = await res.json()
+            if (tg_resp.ok) {
+                const result: TelegramType.Message = tg_resp.result
+                return {
+                    status: 'ok',
+                    retcode: 0,
+                    data: {
+                        message_id: `${chat_id}/${result.message_id}`,
+                        time: result.date!
+                    },
+                    message: ''
+                }
+            }
             return {
-                status: 'ok',
-                retcode: 0,
-                data: {
-                    message_id: `${chat_id}/${result.message_id}`,
-                    time: result.date!
+                status: 'failed',
+                retcode: 34000,
+                data: null,
+                message: `机器人平台未执行此操作: "${tg_resp.description}"`,
+                echo: data.echo ? data.echo : "",
+            }
+        } catch {
+            return default_error_resp(data.echo)
+        }
+    }
+    async deleteMessage(data: ActionsDetail.DeleteMessage): Promise<AllResps> {
+        const target = data.params.message_id.split('/')
+        const payload: TelegramType.DeleteMessagePayload = {
+            chat_id: target[0],
+            message_id: parseInt(target[1])
+        }
+        try {
+            const res = await fetch(
+                `https://api.telegram.org/bot${this.tg.config.token}/deleteMessage`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(payload),
                 },
-                message: ''
+            )
+            const tg_resp = await res.json()
+            if (tg_resp.ok) {
+                return default_success_resp(data.echo)
             }
-        }
-        return {
-            status: 'failed',
-            retcode: 34000,
-            data: null,
-            message: `机器人平台未执行此操作: "${tg_resp.description}"`
+            return {
+                status: 'failed',
+                retcode: 34000,
+                data: null,
+                message: `机器人平台未执行此操作: "${tg_resp.description}"`,
+                echo: data.echo ? data.echo : "",
+            }
+        } catch {
+            return default_error_resp(data.echo)
         }
     }
-    public start() {
-        this.running = true
-        this.ob.start({
-            basic: {
-                onebot_version: 12,
-                impl: "teyda",
-            },
-            ...this.config.connect,
-        })
-        const get_updates = async () => {
-            try {
-                const res = await fetch(
-                    `https://api.telegram.org/bot${this.config.token}/getUpdates`,
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                            timeout: 60000,
-                            offset: this.offset + 1,
-                        }),
+    async getSelfInfo(data: AllActions): Promise<AllResps> {
+        try {
+            const res = await fetch(`https://api.telegram.org/bot${this.tg.config.token}/getMe`)
+            const tg_resp = await res.json()
+            if (tg_resp.ok) {
+                const result: TelegramType.User = tg_resp.result
+                return {
+                    status: 'ok',
+                    data: {
+                        user_id: result.id?.toString()!,
+                        user_name: result.username!,
+                        user_displayname: result.last_name ? `${result.first_name} ${result.last_name}` : result.first_name!
                     },
-                )
-                const data = await res.json()
-                if (data.ok) {
-                    for (const update of data.result) {
-                        this.offset = Math.max(this.offset, update.update_id)
-                        console.log(update)
-                        this.telegram_to_onebot(update)
-                    }
-                    this.change_online(true)
-                } else {
-                    this.change_online(false)
+                    retcode: 0,
+                    message: '',
+                    echo: data.echo ? data.echo : "",
                 }
-                get_updates();
-            } catch (_err) {
-                this.change_online(false)
-                setTimeout(get_updates, 500);
             }
+            return {
+                status: 'failed',
+                retcode: 34000,
+                data: null,
+                message: `机器人平台未执行此操作: "${tg_resp.description}"`,
+                echo: data.echo ? data.echo : "",
+            }
+        } catch {
+            return default_error_resp(data.echo)
         }
-        get_updates()
     }
-    private change_online(bool: boolean): void {
-        if (bool === this.online) return
-        this.online = bool
-        const event: MetaEvents = {
-            id: crypto.randomUUID(),
-            time: new Date().getTime() / 1000,
-            type: 'meta',
-            detail_type: 'status_update',
-            sub_type: '',
-            status: {
-                good: this.online && this.running,
-                bots: [{
-                    self: {
-                        platform: 'telegram',
-                        user_id: this.config.self_id
+    async getUserInfo(data: ActionsDetail.GetUserInfo): Promise<AllResps> {
+        const payload: TelegramType.GetChatPayload = {
+            chat_id: data.params.user_id
+        }
+        try {
+            const res = await fetch(
+                `https://api.telegram.org/bot${this.tg.config.token}/getChat`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
                     },
-                    online: this.online
-                }]
-            }
-        }
-        this.ob.send(event)
-    }
-    private telegram_to_onebot(e: Update): void {
-        if (e.message) {
-            switch (e.message.chat?.type) {
-                case 'private': {
-                    const event: UserMessageEvents = {
-                        id: crypto.randomUUID(),
-                        self: {
-                            platform: 'telegram',
-                            user_id: this.config.self_id
-                        },
-                        time: e.message.date!,
-                        type: 'message',
-                        detail_type: 'private',
-                        sub_type: '',
-                        message_id: `${e.message.chat.id}/${e.message.message_id}`,
-                        message: parseSegment(e.message),
-                        alt_message: e.message.text!,
-                        user_id: e.message.from?.id?.toString()!
-                    }
-                    this.ob.send(event)
-                    break
-                }
-                case 'supergroup':
-                case 'group': {
-                    const event: GroupMessageEvents = {
-                        id: crypto.randomUUID(),
-                        self: {
-                            platform: 'telegram',
-                            user_id: this.config.self_id
-                        },
-                        time: e.message.date!,
-                        type: 'message',
-                        detail_type: 'group',
-                        sub_type: '',
-                        message_id: `${e.message.chat.id}/${e.message.message_id}`,
-                        message: parseSegment(e.message),
-                        alt_message: e.message.text!,
-                        user_id: e.message.from?.id?.toString()!,
-                        group_id: e.message.chat.id?.toString()!
-                    }
-                    this.ob.send(event)
-                    break
+                    body: JSON.stringify(payload),
+                },
+            )
+            const tg_resp = await res.json()
+            if (tg_resp.ok) {
+                const result: TelegramType.Chat = tg_resp.result
+                return {
+                    status: 'ok',
+                    data: {
+                        user_id: result.id?.toString()!,
+                        user_name: result.username!,
+                        user_displayname: result.last_name ? `${result.first_name} ${result.last_name}` : result.first_name!,
+                        user_remark: ''
+                    },
+                    retcode: 0,
+                    message: '',
+                    echo: data.echo ? data.echo : "",
                 }
             }
+            return {
+                status: 'failed',
+                retcode: 34000,
+                data: null,
+                message: `机器人平台未执行此操作: "${tg_resp.description}"`,
+                echo: data.echo ? data.echo : "",
+            }
+        } catch {
+            return default_error_resp(data.echo)
         }
     }
-    public stop() {
-        this.running = false
-        this.ob.shutdown()
+    async getGroupInfo(data: ActionsDetail.GetGroupInfo): Promise<AllResps> {
+        const payload: TelegramType.GetChatPayload = {
+            chat_id: data.params.group_id
+        }
+        try {
+            const res = await fetch(
+                `https://api.telegram.org/bot${this.tg.config.token}/getChat`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(payload),
+                },
+            )
+            const tg_resp = await res.json()
+            if (tg_resp.ok) {
+                const result: TelegramType.Chat = tg_resp.result
+                return {
+                    status: 'ok',
+                    data: {
+                        group_id: result.id?.toString()!,
+                        group_name: result.title!
+                    },
+                    retcode: 0,
+                    message: '',
+                    echo: data.echo ? data.echo : "",
+                }
+            }
+            return {
+                status: 'failed',
+                retcode: 34000,
+                data: null,
+                message: `机器人平台未执行此操作: "${tg_resp.description}"`,
+                echo: data.echo ? data.echo : "",
+            }
+        } catch {
+            return default_error_resp(data.echo)
+        }
+    }
+    async getGroupMemberInfo(data: ActionsDetail.GetGroupMemberInfo): Promise<AllResps> {
+        const payload: TelegramType.GetChatMemberPayload = {
+            chat_id: data.params.group_id,
+            user_id: parseInt(data.params.user_id)
+        }
+        try {
+            const res = await fetch(
+                `https://api.telegram.org/bot${this.tg.config.token}/getChatMember`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(payload),
+                },
+            )
+            const tg_resp = await res.json()
+            if (tg_resp.ok) {
+                const result: TelegramType.ChatMember = tg_resp.result
+                return {
+                    status: 'ok',
+                    data: {
+                        user_id: result.user?.id?.toString()!,
+                        user_name: result.user?.username!,
+                        user_displayname: result.user?.last_name ? `${result.user?.first_name} ${result.user?.last_name}` : result.user?.first_name!,
+                    },
+                    retcode: 0,
+                    message: '',
+                    echo: data.echo ? data.echo : "",
+                }
+            }
+            return {
+                status: 'failed',
+                retcode: 34000,
+                data: null,
+                message: `机器人平台未执行此操作: "${tg_resp.description}"`,
+                echo: data.echo ? data.echo : "",
+            }
+        } catch {
+            return default_error_resp(data.echo)
+        }
+    }
+    async setGroupName(data: ActionsDetail.SetGroupName): Promise<AllResps> {
+        const payload: TelegramType.SetChatTitlePayload = {
+            chat_id: data.params.group_id,
+            title: data.params.group_name
+        }
+        try {
+            const res = await fetch(
+                `https://api.telegram.org/bot${this.tg.config.token}/setChatTitle`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(payload),
+                },
+            )
+            const tg_resp = await res.json()
+            if (tg_resp.ok) {
+                return default_success_resp(data.echo)
+            }
+            return {
+                status: 'failed',
+                retcode: 34000,
+                data: null,
+                message: `机器人平台未执行此操作: "${tg_resp.description}"`,
+                echo: data.echo ? data.echo : "",
+            }
+        } catch {
+            return default_error_resp(data.echo)
+        }
     }
 }
 
@@ -327,5 +571,25 @@ export interface TelegramConfig extends AdapterConfig {
     connect: {
         ws?: OneBotConfig["ws"]
         wsr?: OneBotConfig["wsr"]
+    }
+}
+
+function default_error_resp(echo: string | undefined): AllResps {
+    return {
+        status: 'failed',
+        data: null,
+        retcode: 36000,
+        message: '我不想干了',
+        echo: echo ? echo : "",
+    }
+}
+
+function default_success_resp(echo: string | undefined): AllResps {
+    return {
+        status: 'ok',
+        data: null,
+        retcode: 0,
+        message: '',
+        echo: echo ? echo : "",
     }
 }
