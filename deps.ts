@@ -1,3 +1,5 @@
 //export { OneBot } from 'https://deno.land/x/dnlibob@0.6.0/mod.ts'
 export { OneBot, MessageSegmentsDetail, EventsDetail, ActionsDetail } from '../dnlibob/mod.ts'
 export type { AllResps, OneBotConfig, AllActions, UserMessageEvents, MessageSegments, Message, GroupMessageEvents, MetaEvents } from '../dnlibob/mod.ts'
+export { ensureDir, ensureFile } from 'https://deno.land/std@0.159.0/fs/mod.ts'
+export { encode as base64Encode, decode as base64Decode } from 'https://deno.land/std@0.159.0/encoding/base64.ts'

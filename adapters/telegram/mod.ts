@@ -6,19 +6,22 @@ import {
     GroupMessageEvents,
     MetaEvents,
     ActionsDetail,
-    AllResps
+    AllResps,
+    ensureDir,
+    base64Decode
 } from '../../deps.ts'
 import { Adapter, AdapterConfig } from "../../adapter.ts"
 import * as TelegramType from './types/index.ts'
 import { parseSegment, TelegramMessageSegments } from './seg.ts'
 import { VERSION } from '../../version.ts'
+import { uint8ArrayToHexString } from '../../utils.ts'
 
 export class Telegram extends Adapter {
     private ob: OneBot
     public running = false
     public online = false
     private offset = 0
-    public readonly support_action = ['get_supported_actions', 'get_status', 'get_version', 'send_message', 'delete_message', 'get_self_info', 'get_user_info', 'get_group_info', 'get_group_member_info', 'set_group_name']
+    public readonly support_action = ['get_supported_actions', 'get_status', 'get_version', 'send_message', 'delete_message', 'get_self_info', 'get_user_info', 'get_group_info', 'get_group_member_info', 'set_group_name', 'leave_group', 'upload_file', 'upload_file_fragmented']
     private ah = new ActionHandler(this)
     public info: TelegramType.User | undefined
     constructor(public readonly config: TelegramConfig) {
@@ -45,14 +48,14 @@ export class Telegram extends Adapter {
                     return await this.ah.getGroupMemberInfo(data)
                 case 'set_group_name':
                     return await this.ah.setGroupName(data)
+                case 'leave_group':
+                    return await this.ah.leaveGroup(data)
+                case 'upload_file':
+                    return await this.ah.uploadFile(data)
+                case 'upload_file_fragmented':
+                    return await this.ah.uploadFileFragmented(data)
                 default:
-                    return {
-                        status: "failed",
-                        retcode: 10002,
-                        data: null,
-                        message: "不支持的动作请求",
-                        echo: data.echo ? data.echo : "",
-                    }
+                    return empty_fail_resp(10002, '不支持的动作请求', data.echo)
             }
         })
     }
@@ -337,15 +340,9 @@ class ActionHandler {
                     message: ''
                 }
             }
-            return {
-                status: 'failed',
-                retcode: 34000,
-                data: null,
-                message: `机器人平台未执行此操作: "${tg_resp.description}"`,
-                echo: data.echo ? data.echo : "",
-            }
+            return not_executed_fail_resp(data.echo, tg_resp.description)
         } catch {
-            return default_error_resp(data.echo)
+            return default_fail_resp(data.echo)
         }
     }
     async deleteMessage(data: ActionsDetail.DeleteMessage): Promise<AllResps> {
@@ -369,15 +366,9 @@ class ActionHandler {
             if (tg_resp.ok) {
                 return default_success_resp(data.echo)
             }
-            return {
-                status: 'failed',
-                retcode: 34000,
-                data: null,
-                message: `机器人平台未执行此操作: "${tg_resp.description}"`,
-                echo: data.echo ? data.echo : "",
-            }
+            return not_executed_fail_resp(data.echo, tg_resp.description)
         } catch {
-            return default_error_resp(data.echo)
+            return default_fail_resp(data.echo)
         }
     }
     async getSelfInfo(data: AllActions): Promise<AllResps> {
@@ -398,15 +389,9 @@ class ActionHandler {
                     echo: data.echo ? data.echo : "",
                 }
             }
-            return {
-                status: 'failed',
-                retcode: 34000,
-                data: null,
-                message: `机器人平台未执行此操作: "${tg_resp.description}"`,
-                echo: data.echo ? data.echo : "",
-            }
+            return not_executed_fail_resp(data.echo, tg_resp.description)
         } catch {
-            return default_error_resp(data.echo)
+            return default_fail_resp(data.echo)
         }
     }
     async getUserInfo(data: ActionsDetail.GetUserInfo): Promise<AllResps> {
@@ -440,15 +425,9 @@ class ActionHandler {
                     echo: data.echo ? data.echo : "",
                 }
             }
-            return {
-                status: 'failed',
-                retcode: 34000,
-                data: null,
-                message: `机器人平台未执行此操作: "${tg_resp.description}"`,
-                echo: data.echo ? data.echo : "",
-            }
+            return not_executed_fail_resp(data.echo, tg_resp.description)
         } catch {
-            return default_error_resp(data.echo)
+            return default_fail_resp(data.echo)
         }
     }
     async getGroupInfo(data: ActionsDetail.GetGroupInfo): Promise<AllResps> {
@@ -480,15 +459,9 @@ class ActionHandler {
                     echo: data.echo ? data.echo : "",
                 }
             }
-            return {
-                status: 'failed',
-                retcode: 34000,
-                data: null,
-                message: `机器人平台未执行此操作: "${tg_resp.description}"`,
-                echo: data.echo ? data.echo : "",
-            }
+            return not_executed_fail_resp(data.echo, tg_resp.description)
         } catch {
-            return default_error_resp(data.echo)
+            return default_fail_resp(data.echo)
         }
     }
     async getGroupMemberInfo(data: ActionsDetail.GetGroupMemberInfo): Promise<AllResps> {
@@ -522,15 +495,9 @@ class ActionHandler {
                     echo: data.echo ? data.echo : "",
                 }
             }
-            return {
-                status: 'failed',
-                retcode: 34000,
-                data: null,
-                message: `机器人平台未执行此操作: "${tg_resp.description}"`,
-                echo: data.echo ? data.echo : "",
-            }
+            return not_executed_fail_resp(data.echo, tg_resp.description)
         } catch {
-            return default_error_resp(data.echo)
+            return default_fail_resp(data.echo)
         }
     }
     async setGroupName(data: ActionsDetail.SetGroupName): Promise<AllResps> {
@@ -553,15 +520,127 @@ class ActionHandler {
             if (tg_resp.ok) {
                 return default_success_resp(data.echo)
             }
-            return {
-                status: 'failed',
-                retcode: 34000,
-                data: null,
-                message: `机器人平台未执行此操作: "${tg_resp.description}"`,
-                echo: data.echo ? data.echo : "",
+            return not_executed_fail_resp(data.echo, tg_resp.description)
+        } catch {
+            return default_fail_resp(data.echo)
+        }
+    }
+    async leaveGroup(data: ActionsDetail.LeaveGroup): Promise<AllResps> {
+        const payload: TelegramType.LeaveChatPayload = {
+            chat_id: data.params.group_id
+        }
+        try {
+            const res = await fetch(
+                `https://api.telegram.org/bot${this.tg.config.token}/leaveChat`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(payload),
+                },
+            )
+            const tg_resp = await res.json()
+            if (tg_resp.ok) {
+                return default_success_resp(data.echo)
+            }
+            return not_executed_fail_resp(data.echo, tg_resp.description)
+        } catch {
+            return default_fail_resp(data.echo)
+        }
+    }
+    async uploadFile(data: ActionsDetail.UploadFile): Promise<AllResps> {
+        try {
+            switch (data.params.type) {
+                case 'url': {
+                    const res = await fetch(data.params.url!, {
+                        headers: data.params.headers ? data.params.headers : {}
+                    })
+                    const buf = await res.arrayBuffer()
+                    return await saveFile(buf, data.params.name, data.params.sha256, data.echo)
+                }
+                case 'path': {
+                    const res = await Deno.readFile(data.params.path!)
+                    return await saveFile(res.buffer, data.params.name, data.params.sha256, data.echo)
+                }
+                case 'data': {
+                    if (typeof data.params.data === 'string') {
+                        const res = base64Decode(data.params.data!)
+                        return await saveFile(res.buffer, data.params.name, data.params.sha256, data.echo)
+                    }
+                    return await saveFile(data.params.data!, data.params.name, data.params.sha256, data.echo)
+                }
+                default:
+                    return default_fail_resp(data.echo)
             }
         } catch {
-            return default_error_resp(data.echo)
+            return default_fail_resp(data.echo)
+        }
+    }
+    async uploadFileFragmented(data: ActionsDetail.UploadFileFragmentedFinish | ActionsDetail.UploadFileFragmentedPrepare | ActionsDetail.UploadFileFragmentedTransfer): Promise<AllResps> {
+        try {
+            switch (data.params.stage) {
+                case 'prepare': {
+                    await ensureDir('./teyda_data')
+                    const file_name = `temp_${data.params.name}`
+                    const file = await Deno.open(`./teyda_data/${file_name}`, { read: true, write: true, create: true })
+                    await Deno.ftruncate(file.rid, data.params.total_size)
+                    file.close()
+                    return {
+                        status: 'ok',
+                        data: {
+                            file_id: `td/${file_name}`
+                        },
+                        retcode: 0,
+                        message: '',
+                        echo: data.echo ? data.echo : '',
+                    }
+                }
+                case 'transfer': {
+                    const target = data.params.file_id.split('/')
+                    const stat = await Deno.lstat(`./teyda_data/${target[1]}`)
+                    if (!stat.isFile) {
+                        return empty_fail_resp(32002, 'file_id 错误', data.echo)
+                    }
+                    const file = await Deno.open(`./teyda_data/${target[1]}`, { read: true, write: true })
+                    await file.seek(data.params.offset, 0)
+                    if (typeof data.params.data === 'string') {
+                        await file.write(base64Decode(data.params.data))
+                    } else {
+                        await file.write(new Uint8Array(data.params.data))
+                    }
+                    file.close()
+                    return default_success_resp(data.echo)
+                }
+                case 'finish': {
+                    const target = data.params.file_id.split('/')
+                    const stat = await Deno.lstat(`./teyda_data/${target[1]}`)
+                    if (!stat.isFile) {
+                        return empty_fail_resp(32002, 'file_id 错误', data.echo)
+                    }
+                    const res = await Deno.readFile(`./teyda_data/${target[1]}`)
+                    const digest = await crypto.subtle.digest("SHA-256", res.buffer)
+                    const hash = uint8ArrayToHexString(new Uint8Array(digest))
+                    if (hash !== data.params.sha256) {
+                        return empty_fail_resp(32001, 'SHA-256 hash 不匹配', data.echo)
+                    }
+                    const file_name = target[1].replace('temp_', '')
+                    await Deno.rename(`./teyda_data/${target[1]}`, `./teyda_data/${file_name}`)
+                    return {
+                        status: 'ok',
+                        data: {
+                            file_id: `td/${file_name}`
+                        },
+                        retcode: 0,
+                        message: '',
+                        echo: data.echo ? data.echo : '',
+                    }
+                }
+                default:
+                    return default_fail_resp(data.echo)
+            }
+        } catch {
+            return default_fail_resp(data.echo)
         }
     }
 }
@@ -574,7 +653,17 @@ export interface TelegramConfig extends AdapterConfig {
     }
 }
 
-function default_error_resp(echo: string | undefined): AllResps {
+function empty_fail_resp(retcode: number, message: string, echo: string | undefined): AllResps {
+    return {
+        status: 'failed',
+        data: null,
+        retcode,
+        message,
+        echo: echo ? echo : "",
+    }
+}
+
+function default_fail_resp(echo: string | undefined): AllResps {
     return {
         status: 'failed',
         data: null,
@@ -588,6 +677,37 @@ function default_success_resp(echo: string | undefined): AllResps {
     return {
         status: 'ok',
         data: null,
+        retcode: 0,
+        message: '',
+        echo: echo ? echo : "",
+    }
+}
+
+function not_executed_fail_resp(echo: string | undefined, description: string): AllResps {
+    return {
+        status: 'failed',
+        retcode: 34000,
+        data: null,
+        message: `机器人平台未执行此操作: "${description}"`,
+        echo: echo ? echo : "",
+    }
+}
+
+async function saveFile(buf: ArrayBuffer, name: string, sha256: string | undefined, echo: string | undefined): Promise<AllResps> {
+    if (sha256) {
+        const digest = await crypto.subtle.digest("SHA-256", buf)
+        const hash = uint8ArrayToHexString(new Uint8Array(digest))
+        if (hash !== sha256) {
+            return empty_fail_resp(32001, 'SHA-256 hash 不匹配', echo)
+        }
+    }
+    await ensureDir("./teyda_data")
+    await Deno.writeFile(`./teyda_data/${name}`, new Uint8Array(buf))
+    return {
+        status: 'ok',
+        data: {
+            file_id: `td/${name}`
+        },
         retcode: 0,
         message: '',
         echo: echo ? echo : "",
