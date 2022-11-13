@@ -1,6 +1,6 @@
 import {
     OneBot,
-    MetaEvents,
+    AllEvents,
     OneBotConfig,
 } from '../../deps.ts'
 import { Adapter } from "../../adapter.ts"
@@ -117,7 +117,7 @@ export class Telegram extends Adapter<TelegramConfig> {
     private change_online(bool: boolean) {
         if (bool === this.online) return
         this.online = bool
-        const event: MetaEvents = {
+        const event: AllEvents = {
             id: crypto.randomUUID(),
             time: new Date().getTime() / 1000,
             type: 'meta',

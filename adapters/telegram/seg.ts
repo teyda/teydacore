@@ -1,12 +1,14 @@
 import * as TelegramType from './types/index.ts'
-import { MessageSegmentsDetail, MessageSegments, Message } from '../../deps.ts'
+import { MessageSegmentsDetail, Message } from '../../deps.ts'
 
 declare module '../../deps.ts' {
     namespace MessageSegmentsDetail {
         interface MentionData {
             'telegram.text': string
         }
-        interface TelegramSticker {
+    }
+    interface MessageSegmentMap {
+        'telegram.sticker': {
             type: 'telegram.sticker'
             data: {
                 file_id: string
@@ -14,33 +16,19 @@ declare module '../../deps.ts' {
                 set_name: string
             }
         }
-        interface TelegramAnimation {
+        'telegram.animation':{
             type: 'telegram.animation'
             data: {
                 file_id: string
             }
         }
     }
-    namespace EventsDetail {
-        interface Private {
-            message: Message<ExtendSegments>
-        }
-        interface Group {
-            message: Message<ExtendSegments>
-        }
-    }
-    namespace ActionsDetail {
-        interface SendMessageParams {
-            message: Message<ExtendSegments>
-        }
-    }
 }
-export type ExtendSegments = MessageSegments | MessageSegmentsDetail.TelegramSticker | MessageSegmentsDetail.TelegramAnimation
 
-export function telegram2onebot(message: TelegramType.Message): Message<ExtendSegments> {
-    const parseText = (text: string, entities: TelegramType.MessageEntity[]): Message<ExtendSegments> => {
+export function telegram2onebot(message: TelegramType.Message): Message {
+    const parseText = (text: string, entities: TelegramType.MessageEntity[]): Message => {
         let curr = 0
-        const segs: Message<ExtendSegments> = []
+        const segs: Message = []
         for (const e of entities) {
             const eText = text.substr(e.offset!, e.length)
             if (e.type === 'mention') {
@@ -86,7 +74,7 @@ export function telegram2onebot(message: TelegramType.Message): Message<ExtendSe
         }
         return segs
     }
-    const segments: Message<ExtendSegments> = []
+    const segments: Message = []
     if (message.reply_to_message) {
         segments.push({
             type: 'reply',
@@ -196,7 +184,7 @@ interface payload {
     reply_to_message_id?: number
 }
 
-export async function onebot2telegram(segs: Message<ExtendSegments>): Promise<[payload | FormData, method]> {
+export async function onebot2telegram(segs: Message): Promise<[payload | FormData, method]> {
     const payload: payload = {}
     let offset = 0
     for (const seg of segs) {

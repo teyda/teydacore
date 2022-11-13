@@ -1,6 +1,5 @@
 import {
-    AllActions,
-    ActionsDetail,
+    Action,
     AllResps,
     ensureDir,
     base64Decode,
@@ -10,7 +9,7 @@ import {
     extname
 } from '../../deps.ts'
 import * as TelegramType from './types/index.ts'
-import { onebot2telegram, ExtendSegments } from './seg.ts'
+import { onebot2telegram } from './seg.ts'
 import { VERSION } from '../../version.ts'
 import { uint8ArrayToHexString } from '../../utils.ts'
 import { Telegram } from './mod.ts'
@@ -18,7 +17,8 @@ import { Telegram } from './mod.ts'
 export class ActionHandler {
     constructor(private tg: Telegram, private internal: TelegramType.Internal) {
     }
-    getSupportedActions(data: AllActions): AllResps {
+    getSupportedActions(data: Action): AllResps {
+        if (data.action == 'send_message') { data.params.channel_id }
         return {
             status: "ok",
             retcode: 0,
@@ -27,7 +27,7 @@ export class ActionHandler {
             echo: data.echo ? data.echo : "",
         }
     }
-    getStatus(data: AllActions): AllResps {
+    getStatus(data: Action): AllResps {
         return {
             status: "ok",
             retcode: 0,
@@ -45,7 +45,7 @@ export class ActionHandler {
             echo: data.echo ? data.echo : "",
         }
     }
-    getVersion(data: AllActions): AllResps {
+    getVersion(data: Action): AllResps {
         return {
             status: "ok",
             retcode: 0,
@@ -58,7 +58,7 @@ export class ActionHandler {
             echo: data.echo ? data.echo : "",
         }
     }
-    async sendMessage(data: ActionsDetail.SendMessage<ExtendSegments>): Promise<AllResps> {
+    async sendMessage(data: Action<'send_message'>): Promise<AllResps> {
         const chat_id = data.params.user_id || data.params.group_id
         const [payload, method] = await onebot2telegram(data.params.message)
         let all_payload
@@ -84,7 +84,7 @@ export class ActionHandler {
             return default_fail_resp(data.echo)
         }
     }
-    async deleteMessage(data: ActionsDetail.DeleteMessage): Promise<AllResps> {
+    async deleteMessage(data: Action<'delete_message'>): Promise<AllResps> {
         const target = data.params.message_id.split('/')
         try {
             await this.internal.deleteMessage({
@@ -96,7 +96,7 @@ export class ActionHandler {
             return default_fail_resp(data.echo)
         }
     }
-    async getSelfInfo(data: AllActions): Promise<AllResps> {
+    async getSelfInfo(data: Action<'get_self_info'>): Promise<AllResps> {
         try {
             const result = await this.internal.getMe()
             return {
@@ -114,7 +114,7 @@ export class ActionHandler {
             return default_fail_resp(data.echo)
         }
     }
-    async getUserInfo(data: ActionsDetail.GetUserInfo): Promise<AllResps> {
+    async getUserInfo(data: Action<'get_user_info'>): Promise<AllResps> {
         try {
             const result = await this.internal.getChat({
                 chat_id: data.params.user_id
@@ -135,7 +135,7 @@ export class ActionHandler {
             return default_fail_resp(data.echo)
         }
     }
-    async getGroupInfo(data: ActionsDetail.GetGroupInfo): Promise<AllResps> {
+    async getGroupInfo(data: Action<'get_group_info'>): Promise<AllResps> {
         try {
             const result = await this.internal.getChat({
                 chat_id: data.params.group_id
@@ -154,7 +154,7 @@ export class ActionHandler {
             return default_fail_resp(data.echo)
         }
     }
-    async getGroupMemberInfo(data: ActionsDetail.GetGroupMemberInfo): Promise<AllResps> {
+    async getGroupMemberInfo(data: Action<'get_group_member_info'>): Promise<AllResps> {
         try {
             const result = await this.internal.getChatMember({
                 chat_id: data.params.group_id,
@@ -175,7 +175,7 @@ export class ActionHandler {
             return default_fail_resp(data.echo)
         }
     }
-    async setGroupName(data: ActionsDetail.SetGroupName): Promise<AllResps> {
+    async setGroupName(data: Action<'set_group_name'>): Promise<AllResps> {
         try {
             await this.internal.SetChatTitle({
                 chat_id: data.params.group_id,
@@ -186,7 +186,7 @@ export class ActionHandler {
             return default_fail_resp(data.echo)
         }
     }
-    async leaveGroup(data: ActionsDetail.LeaveGroup): Promise<AllResps> {
+    async leaveGroup(data: Action<'leave_group'>): Promise<AllResps> {
         try {
             await this.internal.LeaveChat({
                 chat_id: data.params.group_id
@@ -196,7 +196,7 @@ export class ActionHandler {
             return default_fail_resp(data.echo)
         }
     }
-    async uploadFile(data: ActionsDetail.UploadFile): Promise<AllResps> {
+    async uploadFile(data: Action<'upload_file'>): Promise<AllResps> {
         try {
             switch (data.params.type) {
                 case 'url': {
@@ -224,7 +224,7 @@ export class ActionHandler {
             return default_fail_resp(data.echo)
         }
     }
-    async uploadFileFragmented(data: ActionsDetail.UploadFileFragmentedFinish | ActionsDetail.UploadFileFragmentedPrepare | ActionsDetail.UploadFileFragmentedTransfer): Promise<AllResps> {
+    async uploadFileFragmented(data: Action<'upload_file_fragmented'>): Promise<AllResps> {
         try {
             switch (data.params.stage) {
                 case 'prepare': {
@@ -290,7 +290,7 @@ export class ActionHandler {
             return default_fail_resp(data.echo)
         }
     }
-    async getFile(data: ActionsDetail.GetFile, send_msgpack: boolean): Promise<AllResps> {
+    async getFile(data: Action<'get_file'>, send_msgpack: boolean): Promise<AllResps> {
         try {
             const target = data.params.file_id.split('/')
             switch (data.params.type) {
@@ -432,7 +432,7 @@ export class ActionHandler {
             return default_fail_resp(data.echo)
         }
     }
-    async getFileFragmented(data: ActionsDetail.GetFileFragmentedPrepare | ActionsDetail.GetFileFragmentedTransfer, send_msgpack: boolean): Promise<AllResps> {
+    async getFileFragmented(data: Action<'get_file_fragmented'>, send_msgpack: boolean): Promise<AllResps> {
         try {
             const target = data.params.file_id.split('/')
             switch (data.params.stage) {
