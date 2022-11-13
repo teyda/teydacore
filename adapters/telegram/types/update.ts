@@ -1,4 +1,5 @@
-import { InputFile, Integer } from './index.ts'
+import { InputFile, Integer, Internal } from './index.ts'
+import type {} from './internal.ts'
 
 /**
  * This object represents an incoming update. At most one of the optional parameters can be present in any given update.
@@ -69,3 +70,35 @@ export interface WebhookInfo {
   /** Optional. A list of update types the bot is subscribed to. Defaults to all update types except chat_member */
   allowed_updates?: string[]
 }
+
+declare module './internal.ts' {
+  interface Internal {
+    /**
+     * Use this method to receive incoming updates using long polling (wiki). An Array of Update objects is returned.
+     * @see https://core.telegram.org/bots/api#getupdates
+     */
+    getUpdates(payload: GetUpdatesPayload): Promise<Update[]>
+    /**
+     * Use this method to specify a url and receive incoming updates via an outgoing webhook. Whenever there is an update for the bot, we will send an HTTPS POST request to the specified url, containing a JSON-serialized Update. In case of an unsuccessful request, we will give up after a reasonable amount of attempts. Returns True on success.
+     *
+     * If you'd like to make sure that the Webhook request comes from Telegram, we recommend using a secret path in the URL, e.g. https://www.example.com/<token>. Since nobody else knows your bot's token, you can be pretty sure it's us.
+     * @see https://core.telegram.org/bots/api#setwebhook
+     */
+    setWebhook(payload: SetWebhookPayload): Promise<boolean>
+    /**
+     * Use this method to remove webhook integration if you decide to switch back to getUpdates. Returns True on success.
+     * @see https://core.telegram.org/bots/api#deletewebhook
+     */
+    deleteWebhook(payload: DeleteWebhookPayload): Promise<boolean>
+    /**
+     * Use this method to get current webhook status. Requires no parameters. On success, returns a WebhookInfo object. If the bot is using getUpdates, will return an object with the url field empty.
+     * @see https://core.telegram.org/bots/api#getwebhookinfo
+     */
+    getWebhookInfo(): Promise<WebhookInfo>
+  }
+}
+
+Internal.define('getUpdates')
+Internal.define('setWebhook')
+Internal.define('deleteWebhook')
+Internal.define('getWebhookInfo')

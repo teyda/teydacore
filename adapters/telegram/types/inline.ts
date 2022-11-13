@@ -1,4 +1,6 @@
-import { Float, InlineKeyboardMarkup, Integer, LabeledPrice, MessageEntity, User } from './index.ts'
+import { Float, InlineKeyboardMarkup, Integer, Internal, LabeledPrice, MessageEntity, User } from './index.ts'
+import type {} from './internal.ts'
+import type {} from './update.ts'
 
 /**
  * This object represents an incoming inline query. When the user sends an empty query, your bot could return some default or trending results.
@@ -821,3 +823,15 @@ declare module './update.ts' {
     chosen_inline_result?: ChosenInlineResult
   }
 }
+
+declare module './internal.ts' {
+  interface Internal {
+    /**
+     * Use this method to send answers to an inline query. On success, True is returned. No more than 50 results per query are allowed.
+     * @see https://core.telegram.org/bots/api#answerinlinequery
+     */
+    answerInlineQuery(payload: AnswerInlineQueryPayload): Promise<boolean>
+  }
+}
+
+Internal.define('answerInlineQuery')

@@ -1,5 +1,8 @@
+// deno-lint-ignore-file no-explicit-any
+import { Internal } from './internal.ts'
 import { CallbackGame, Game } from './game.ts'
 
+export * from './internal.ts'
 export * from './inline.ts'
 export * from './game.ts'
 export * from './passport.ts'
@@ -592,7 +595,6 @@ export interface VoiceChatScheduled {
  * This object represents a service message about a voice chat started in the chat. Currently holds no information.
  * @see https://core.telegram.org/bots/api#voicechatstarted
  */
-// deno-lint-ignore no-explicit-any
 export type VoiceChatStarted = any
 
 /**
@@ -1294,7 +1296,6 @@ export interface InputMediaDocument {
  * This object represents the contents of a file to be uploaded. Must be posted using multipart/form-data in the usual way that files are uploaded via the browser.
  * @see https://core.telegram.org/bots/api#inputfile
  */
-// deno-lint-ignore no-explicit-any
 export type InputFile = any
 
 export interface SendMessagePayload {
@@ -2101,3 +2102,397 @@ export interface DeleteMessagePayload {
   /** Identifier of the message to delete */
   message_id?: Integer
 }
+
+declare module './internal.ts' {
+  export interface Internal {
+    /**
+     * A simple method for testing your bot's authentication token. Requires no parameters. Returns basic information about the bot in form of a User object.
+     * @see https://core.telegram.org/bots/api#getme
+     */
+    getMe(): Promise<User>
+    /**
+     * Use this method to log out from the cloud Bot API server before launching the bot locally. You must log out the bot before running it locally, otherwise there is no guarantee that the bot will receive updates. After a successful call, you can immediately log in on a local server, but will not be able to log in back to the cloud Bot API server for 10 minutes. Returns True on success. Requires no parameters.
+     * @see https://core.telegram.org/bots/api#logout
+     */
+    logOut(): Promise<boolean>
+    /**
+     * Use this method to close the bot instance before moving it from one local server to another. You need to delete the webhook before calling this method to ensure that the bot isn't launched again after server restart. The method will return error 429 in the first 10 minutes after the bot is launched. Returns True on success. Requires no parameters.
+     * @see https://core.telegram.org/bots/api#close
+     */
+    close(): Promise<boolean>
+    /**
+     * Use this method to send text messages. On success, the sent Message is returned.
+     * @see https://core.telegram.org/bots/api#sendmessage
+     */
+    sendMessage(payload: SendMessagePayload): Promise<Message>
+    /**
+     * Use this method to forward messages of any kind. Service messages can't be forwarded. On success, the sent Message is returned.
+     * @see https://core.telegram.org/bots/api#forwardmessage
+     */
+    forwardMessage(payload: ForwardMessagePayload): Promise<Message>
+    /**
+     * Use this method to copy messages of any kind. Service messages and invoice messages can't be copied. The method is analogous to the method forwardMessage, but the copied message doesn't have a link to the original message. Returns the MessageId of the sent message on success.
+     * @see https://core.telegram.org/bots/api#copymessage
+     */
+    copyMessage(payload: CopyMessagePayload): Promise<Integer>
+    /**
+     * Use this method to send photos. On success, the sent Message is returned.
+     * @see https://core.telegram.org/bots/api#sendphoto
+     */
+    sendPhoto(payload: SendPhotoPayload): Promise<Message>
+    /**
+     * Use this method to send audio files, if you want Telegram clients to display them in the music player. Your audio must be in the .MP3 or .M4A format. On success, the sent Message is returned. Bots can currently send audio files of up to 50 MB in size, this limit may be changed in the future.
+     *
+     * For sending voice messages, use the sendVoice method instead.
+     * @see https://core.telegram.org/bots/api#sendaudio
+     */
+    sendAudio(payload: SendAudioPayload): Promise<Message>
+    /**
+     * Use this method to send general files. On success, the sent Message is returned. Bots can currently send files of any type of up to 50 MB in size, this limit may be changed in the future.
+     * @see https://core.telegram.org/bots/api#senddocument
+     */
+    sendDocument(payload: SendDocumentPayload): Promise<Message>
+    /**
+     * Use this method to send video files, Telegram clients support mp4 videos (other formats may be sent as Document). On success, the sent Message is returned. Bots can currently send video files of up to 50 MB in size, this limit may be changed in the future.
+     * @see https://core.telegram.org/bots/api#sendvideo
+     */
+    sendVideo(payload: SendVideoPayload): Promise<Message>
+    /**
+     * Use this method to send animation files (GIF or H.264/MPEG-4 AVC video without sound). On success, the sent Message is returned. Bots can currently send animation files of up to 50 MB in size, this limit may be changed in the future.
+     * @see https://core.telegram.org/bots/api#sendanimation
+     */
+    sendAnimation(payload: SendAnimationPayload): Promise<Message>
+    /**
+     * Use this method to send audio files, if you want Telegram clients to display the file as a playable voice message. For this to work, your audio must be in an .OGG file encoded with OPUS (other formats may be sent as Audio or Document). On success, the sent Message is returned. Bots can currently send voice messages of up to 50 MB in size, this limit may be changed in the future.
+     * @see https://core.telegram.org/bots/api#sendvoice
+     */
+    sendVoice(payload: SendVoicePayload): Promise<Message>
+    /**
+     * As of v.4.0, Telegram clients support rounded square mp4 videos of up to 1 minute long. Use this method to send video messages. On success, the sent Message is returned.
+     * @see https://core.telegram.org/bots/api#sendvideonote
+     */
+    sendVideoNote(payload: SendVideoNotePayload): Promise<Message>
+    /**
+     * Use this method to send a group of photos, videos, documents or audios as an album. Documents and audio files can be only grouped in an album with messages of the same type. On success, an array of Messages that were sent is returned.
+     * @see https://core.telegram.org/bots/api#sendmediagroup
+     */
+    sendMediaGroup(payload: SendMediaGroupPayload): Promise<Message[]>
+    /**
+     * Use this method to send point on the map. On success, the sent Message is returned.
+     * @see https://core.telegram.org/bots/api#sendlocation
+     */
+    sendLocation(payload: SendLocationPayload): Promise<Message>
+    /**
+     * Use this method to edit live location messages. A location can be edited until its live_period expires or editing is explicitly disabled by a call to stopMessageLiveLocation. On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned.
+     * @see https://core.telegram.org/bots/api#editmessagelivelocation
+     */
+    editMessageLiveLocation(payload: EditMessageLiveLocationPayload): Promise<Message | boolean>
+    /**
+     * Use this method to stop updating a live location message before live_period expires. On success, if the message is not an inline message, the edited Message is returned, otherwise True is returned.
+     * @see https://core.telegram.org/bots/api#stopmessagelivelocation
+     */
+    stopMessageLiveLocation(payload: StopMessageLiveLocationPayload): Promise<Message | boolean>
+    /**
+     * Use this method to send information about a venue. On success, the sent Message is returned.
+     * @see https://core.telegram.org/bots/api#sendvenue
+     */
+    sendVenue(payload: SendVenuePayload): Promise<Message>
+    /**
+     * Use this method to send phone contacts. On success, the sent Message is returned.
+     * @see https://core.telegram.org/bots/api#sendcontact
+     */
+    sendContact(payload: SendContactPayload): Promise<Message>
+    /**
+     * Use this method to send a native poll. On success, the sent Message is returned.
+     * @see https://core.telegram.org/bots/api#sendpoll
+     */
+    sendPoll(payload: SendPollPayload): Promise<Message>
+    /**
+     * Use this method to send an animated emoji that will display a random value. On success, the sent Message is returned.
+     * @see https://core.telegram.org/bots/api#senddice
+     */
+    sendDice(payload: SendDicePayload): Promise<Message>
+    /**
+     * Use this method when you need to tell the user that something is happening on the bot's side. The status is set for 5 seconds or less (when a message arrives from your bot, Telegram clients clear its typing status). Returns True on success.
+     *
+     * Example: The ImageBot needs some time to process a request and upload the image. Instead of sending a text message along the lines of "Retrieving image, please wait...", the bot may use sendChatAction with action = upload_photo. The user will see a "sending photo" status for the bot.
+     *
+     * We only recommend using this method when a response from the bot will take a noticeable amount of time to arrive.
+     * @see https://core.telegram.org/bots/api#sendchataction
+     */
+    sendChatAction(payload: SendChatActionPayload): Promise<boolean>
+    /**
+     * Use this method to get a list of profile pictures for a user. Returns a UserProfilePhotos object.
+     * @see https://core.telegram.org/bots/api#getuserprofilephotos
+     */
+    getUserProfilePhotos(payload: GetUserProfilePhotosPayload): Promise<UserProfilePhotos>
+    /**
+     * Use this method to get basic info about a file and prepare it for downloading. For the moment, bots can download files of up to 20MB in size. On success, a File object is returned. The file can then be downloaded via the link https://api.telegram.org/file/bot<token>/<file_path>, where <file_path> is taken from the response. It is guaranteed that the link will be valid for at least 1 hour. When the link expires, a new one can be requested by calling getFile again.
+     * @see https://core.telegram.org/bots/api#getfile
+     */
+    getFile(payload: GetFilePayload): Promise<File>
+    /**
+     * Use this method to ban a user in a group, a supergroup or a channel. In the case of supergroups and channels, the user will not be able to return to the chat on their own using invite links, etc., unless unbanned first. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns True on success.
+     * @see https://core.telegram.org/bots/api#banchatmember
+     */
+    banChatMember(payload: BanChatMemberPayload): Promise<boolean>
+    /**
+     * Use this method to unban a previously banned user in a supergroup or channel. The user will not return to the group or channel automatically, but will be able to join via link, etc. The bot must be an administrator for this to work. By default, this method guarantees that after the call the user is not a member of the chat, but will be able to join it. So if the user is a member of the chat they will also be removed from the chat. If you don't want this, use the parameter only_if_banned. Returns True on success.
+     * @see https://core.telegram.org/bots/api#unbanchatmember
+     */
+    unbanChatMember(payload: UnbanChatMemberPayload): Promise<boolean>
+    /**
+     * Use this method to restrict a user in a supergroup. The bot must be an administrator in the supergroup for this to work and must have the appropriate administrator rights. Pass True for all permissions to lift restrictions from a user. Returns True on success.
+     * @see https://core.telegram.org/bots/api#restrictchatmember
+     */
+    restrictChatMember(payload: RestrictChatMemberPayload): Promise<boolean>
+    /**
+     * Use this method to promote or demote a user in a supergroup or a channel. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Pass False for all boolean parameters to demote a user. Returns True on success.
+     * @see https://core.telegram.org/bots/api#promotechatmember
+     */
+    promoteChatMember(payload: PromoteChatMemberPayload): Promise<boolean>
+    /**
+     * Use this method to set a custom title for an administrator in a supergroup promoted by the bot. Returns True on success.
+     * @see https://core.telegram.org/bots/api#setchatadministratorcustomtitle
+     */
+    setChatAdministratorCustomTitle(payload: SetChatAdministratorCustomTitlePayload): Promise<boolean>
+    /**
+     * Use this method to ban a channel chat in a supergroup or a channel. Until the chat is unbanned, the owner of the banned chat won't be able to send messages on behalf of any of their channels. The bot must be an administrator in the supergroup or channel for this to work and must have the appropriate administrator rights. Returns True on success.
+     * @see https://core.telegram.org/bots/api#banchatsenderchat
+     */
+    banChatSenderChat(payload: BanChatSenderChatPayload): Promise<boolean>
+    /**
+     * Use this method to unban a previously banned channel chat in a supergroup or channel. The bot must be an administrator for this to work and must have the appropriate administrator rights. Returns True on success.
+     * @see https://core.telegram.org/bots/api#unbanchatsenderchat
+     */
+    unbanChatSenderChat(payload: UnbanChatSenderChatPayload): Promise<boolean>
+    /**
+     * Use this method to set default chat permissions for all members. The bot must be an administrator in the group or a supergroup for this to work and must have the can_restrict_members administrator rights. Returns True on success.
+     * @see https://core.telegram.org/bots/api#setchatpermissions
+     */
+    setChatPermissions(payload: SetChatPermissionsPayload): Promise<boolean>
+    /**
+     * Use this method to generate a new primary invite link for a chat; any previously generated primary link is revoked. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns the new invite link as String on success.
+     * @see https://core.telegram.org/bots/api#exportchatinvitelink
+     */
+    exportChatInviteLink(payload: ExportChatInviteLinkPayload): Promise<string>
+    /**
+     * Use this method to create an additional invite link for a chat. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. The link can be revoked using the method revokeChatInviteLink. Returns the new invite link as ChatInviteLink object.
+     * @see https://core.telegram.org/bots/api#createchatinvitelink
+     */
+    createChatInviteLink(payload: CreateChatInviteLinkPayload): Promise<ChatInviteLink>
+    /**
+     * Use this method to edit a non-primary invite link created by the bot. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns the edited invite link as a ChatInviteLink object.
+     * @see https://core.telegram.org/bots/api#editchatinvitelink
+     */
+    editChatInviteLink(payload: EditChatInviteLinkPayload): Promise<ChatInviteLink>
+    /**
+     * Use this method to revoke an invite link created by the bot. If the primary link is revoked, a new link is automatically generated. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns the revoked invite link as ChatInviteLink object.
+     * @see https://core.telegram.org/bots/api#revokechatinvitelink
+     */
+    revokeChatInviteLink(payload: RevokeChatInviteLinkPayload): Promise<ChatInviteLink>
+    /**
+     * Use this method to approve a chat join request. The bot must be an administrator in the chat for this to work and must have the can_invite_users administrator right. Returns True on success.
+     * @see https://core.telegram.org/bots/api#approvechatjoinrequest
+     */
+    approveChatJoinRequest(payload: ApproveChatJoinRequestPayload): Promise<boolean>
+    /**
+     * Use this method to decline a chat join request. The bot must be an administrator in the chat for this to work and must have the can_invite_users administrator right. Returns True on success.
+     * @see https://core.telegram.org/bots/api#declinechatjoinrequest
+     */
+    declineChatJoinRequest(payload: DeclineChatJoinRequestPayload): Promise<boolean>
+    /**
+     * Use this method to set a new profile photo for the chat. Photos can't be changed for private chats. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns True on success.
+     * @see https://core.telegram.org/bots/api#setchatphoto
+     */
+    setChatPhoto(payload: SetChatPhotoPayload): Promise<boolean>
+    /**
+     * Use this method to delete a chat photo. Photos can't be changed for private chats. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns True on success.
+     * @see https://core.telegram.org/bots/api#deletechatphoto
+     */
+    deleteChatPhoto(payload: DeleteChatPhotoPayload): Promise<boolean>
+    /**
+     * Use this method to change the title of a chat. Titles can't be changed for private chats. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns True on success.
+     * @see https://core.telegram.org/bots/api#setchattitle
+     */
+    setChatTitle(payload: SetChatTitlePayload): Promise<boolean>
+    /**
+     * Use this method to change the description of a group, a supergroup or a channel. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns True on success.
+     * @see https://core.telegram.org/bots/api#setchatdescription
+     */
+    setChatDescription(payload: SetChatDescriptionPayload): Promise<boolean>
+    /**
+     * Use this method to add a message to the list of pinned messages in a chat. If the chat is not a private chat, the bot must be an administrator in the chat for this to work and must have the 'can_pin_messages' administrator right in a supergroup or 'can_edit_messages' administrator right in a channel. Returns True on success.
+     * @see https://core.telegram.org/bots/api#pinchatmessage
+     */
+    pinChatMessage(payload: PinChatMessagePayload): Promise<boolean>
+    /**
+     * Use this method to remove a message from the list of pinned messages in a chat. If the chat is not a private chat, the bot must be an administrator in the chat for this to work and must have the 'can_pin_messages' administrator right in a supergroup or 'can_edit_messages' administrator right in a channel. Returns True on success.
+     * @see https://core.telegram.org/bots/api#unpinchatmessage
+     */
+    unpinChatMessage(payload: UnpinChatMessagePayload): Promise<boolean>
+    /**
+     * Use this method to clear the list of pinned messages in a chat. If the chat is not a private chat, the bot must be an administrator in the chat for this to work and must have the 'can_pin_messages' administrator right in a supergroup or 'can_edit_messages' administrator right in a channel. Returns True on success.
+     * @see https://core.telegram.org/bots/api#unpinallchatmessages
+     */
+    unpinAllChatMessages(payload: UnpinAllChatMessagesPayload): Promise<boolean>
+    /**
+     * Use this method for your bot to leave a group, supergroup or channel. Returns True on success.
+     * @see https://core.telegram.org/bots/api#leavechat
+     */
+    leaveChat(payload: LeaveChatPayload): Promise<boolean>
+    /**
+     * Use this method to get up to date information about the chat (current name of the user for one-on-one conversations, current username of a user, group or channel, etc.). Returns a Chat object on success.
+     * @see https://core.telegram.org/bots/api#getchat
+     */
+    getChat(payload: GetChatPayload): Promise<Chat>
+    /**
+     * Use this method to get a list of administrators in a chat. On success, returns an Array of ChatMember objects that contains information about all chat administrators except other bots. If the chat is a group or a supergroup and no administrators were appointed, only the creator will be returned.
+     * @see https://core.telegram.org/bots/api#getchatadministrators
+     */
+    getChatAdministrators(payload: GetChatAdministratorsPayload): Promise<ChatMember[]>
+    /**
+     * Use this method to get the number of members in a chat. Returns Int on success.
+     * @see https://core.telegram.org/bots/api#getchatmembercount
+     */
+    getChatMemberCount(payload: GetChatMemberCountPayload): Promise<Integer>
+    /**
+     * Use this method to get information about a member of a chat. Returns a ChatMember object on success.
+     * @see https://core.telegram.org/bots/api#getchatmember
+     */
+    getChatMember(payload: GetChatMemberPayload): Promise<ChatMember>
+    /**
+     * Use this method to set a new group sticker set for a supergroup. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Use the field can_set_sticker_set optionally returned in getChat requests to check if the bot can use this method. Returns True on success.
+     * @see https://core.telegram.org/bots/api#setchatstickerset
+     */
+    setChatStickerSet(payload: SetChatStickerSetPayload): Promise<boolean>
+    /**
+     * Use this method to delete a group sticker set from a supergroup. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Use the field can_set_sticker_set optionally returned in getChat requests to check if the bot can use this method. Returns True on success.
+     * @see https://core.telegram.org/bots/api#deletechatstickerset
+     */
+    deleteChatStickerSet(payload: DeleteChatStickerSetPayload): Promise<boolean>
+    /**
+     * Use this method to send answers to callback queries sent from inline keyboards. The answer will be displayed to the user as a notification at the top of the chat screen or as an alert. On success, True is returned.
+     *
+     * Alternatively, the user can be redirected to the specified Game URL. For this option to work, you must first create a game for your bot via @Botfather and accept the terms. Otherwise, you may use links like t.me/your_bot?start=XXXX that open your bot with a parameter.
+     * @see https://core.telegram.org/bots/api#answercallbackquery
+     */
+    answerCallbackQuery(payload: AnswerCallbackQueryPayload): Promise<boolean>
+    /**
+     * Use this method to change the list of the bot's commands. See https://core.telegram.org/bots#commands for more details about bot commands. Returns True on success.
+     * @see https://core.telegram.org/bots/api#setmycommands
+     */
+    setMyCommands(payload: SetMyCommandsPayload): Promise<boolean>
+    /**
+     * Use this method to delete the list of the bot's commands for the given scope and user language. After deletion, higher level commands will be shown to affected users. Returns True on success.
+     * @see https://core.telegram.org/bots/api#deletemycommands
+     */
+    deleteMyCommands(payload: DeleteMyCommandsPayload): Promise<boolean>
+    /**
+     * Use this method to get the current list of the bot's commands for the given scope and user language. Returns BotCommand on success. If commands aren't set, an empty list is returned.
+     * @see https://core.telegram.org/bots/api#getmycommands
+     */
+    getMyCommands(payload: GetMyCommandsPayload): Promise<BotCommand[]>
+    /**
+     * Use this method to edit text and game messages. On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned.
+     * @see https://core.telegram.org/bots/api#editmessagetext
+     */
+    editMessageText(payload: EditMessageTextPayload): Promise<Message | boolean>
+    /**
+     * Use this method to edit captions of messages. On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned.
+     * @see https://core.telegram.org/bots/api#editmessagecaption
+     */
+    editMessageCaption(payload: EditMessageCaptionPayload): Promise<Message | boolean>
+    /**
+     * Use this method to edit animation, audio, document, photo, or video messages. If a message is part of a message album, then it can be edited only to an audio for audio albums, only to a document for document albums and to a photo or a video otherwise. When an inline message is edited, a new file can't be uploaded; use a previously uploaded file via its file_id or specify a URL. On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned.
+     * @see https://core.telegram.org/bots/api#editmessagemedia
+     */
+    editMessageMedia(payload: EditMessageMediaPayload): Promise<Message | boolean>
+    /**
+     * Use this method to edit only the reply markup of messages. On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned.
+     * @see https://core.telegram.org/bots/api#editmessagereplymarkup
+     */
+    editMessageReplyMarkup(payload: EditMessageReplyMarkupPayload): Promise<Message | boolean>
+    /**
+     * Use this method to stop a poll which was sent by the bot. On success, the stopped Poll is returned.
+     * @see https://core.telegram.org/bots/api#stoppoll
+     */
+    stopPoll(payload: StopPollPayload): Promise<Poll>
+    /**
+     * Use this method to delete a message, including service messages, with the following limitations:
+     * - A message can only be deleted if it was sent less than 48 hours ago.
+     * - A dice message in a private chat can only be deleted if it was sent more than 24 hours ago.
+     * - Bots can delete outgoing messages in private chats, groups, and supergroups.
+     * - Bots can delete incoming messages in private chats.
+     * - Bots granted can_post_messages permissions can delete outgoing messages in channels.
+     * - If the bot is an administrator of a group, it can delete any message there.
+     * - If the bot has can_delete_messages permission in a supergroup or a channel, it can delete any message there.
+     * Returns True on success.
+     * @see https://core.telegram.org/bots/api#deletemessage
+     */
+    deleteMessage(payload: DeleteMessagePayload): Promise<boolean>
+  }
+}
+
+Internal.define('getMe')
+Internal.define('logOut')
+Internal.define('close')
+Internal.define('sendMessage')
+Internal.define('forwardMessage')
+Internal.define('copyMessage')
+Internal.define('sendPhoto')
+Internal.define('sendAudio')
+Internal.define('sendDocument')
+Internal.define('sendVideo')
+Internal.define('sendAnimation')
+Internal.define('sendVoice')
+Internal.define('sendVideoNote')
+Internal.define('sendMediaGroup')
+Internal.define('sendLocation')
+Internal.define('editMessageLiveLocation')
+Internal.define('stopMessageLiveLocation')
+Internal.define('sendVenue')
+Internal.define('sendContact')
+Internal.define('sendPoll')
+Internal.define('sendDice')
+Internal.define('sendChatAction')
+Internal.define('getUserProfilePhotos')
+Internal.define('getFile')
+Internal.define('banChatMember')
+Internal.define('unbanChatMember')
+Internal.define('restrictChatMember')
+Internal.define('promoteChatMember')
+Internal.define('setChatAdministratorCustomTitle')
+Internal.define('banChatSenderChat')
+Internal.define('unbanChatSenderChat')
+Internal.define('setChatPermissions')
+Internal.define('exportChatInviteLink')
+Internal.define('createChatInviteLink')
+Internal.define('editChatInviteLink')
+Internal.define('revokeChatInviteLink')
+Internal.define('approveChatJoinRequest')
+Internal.define('declineChatJoinRequest')
+Internal.define('setChatPhoto')
+Internal.define('deleteChatPhoto')
+Internal.define('setChatTitle')
+Internal.define('setChatDescription')
+Internal.define('pinChatMessage')
+Internal.define('unpinChatMessage')
+Internal.define('unpinAllChatMessages')
+Internal.define('leaveChat')
+Internal.define('getChat')
+Internal.define('getChatAdministrators')
+Internal.define('getChatMemberCount')
+Internal.define('getChatMember')
+Internal.define('setChatStickerSet')
+Internal.define('deleteChatStickerSet')
+Internal.define('answerCallbackQuery')
+Internal.define('setMyCommands')
+Internal.define('deleteMyCommands')
+Internal.define('getMyCommands')
+Internal.define('editMessageText')
+Internal.define('editMessageCaption')
+Internal.define('editMessageMedia')
+Internal.define('editMessageReplyMarkup')
+Internal.define('stopPoll')
+Internal.define('deleteMessage')

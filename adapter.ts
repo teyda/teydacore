@@ -1,5 +1,6 @@
 export abstract class Adapter<T extends AdapterConfig = AdapterConfig> {
-    abstract config: T
+    constructor(public config: T) {
+    }
     abstract start(): Promise<void> | void
     abstract stop(): Promise<void> | void
 }

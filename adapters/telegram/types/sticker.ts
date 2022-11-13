@@ -1,4 +1,5 @@
-import { Float, ForceReply, InlineKeyboardMarkup, InputFile, Integer, PhotoSize, ReplyKeyboardMarkup, ReplyKeyboardRemove } from './index.ts'
+import { Float, ForceReply, InlineKeyboardMarkup, InputFile, Integer, Internal, Message, PhotoSize, ReplyKeyboardMarkup, ReplyKeyboardRemove } from './index.ts'
+import type {} from './internal.ts'
 
 /**
  * This object represents a sticker.
@@ -159,3 +160,57 @@ declare module './index.ts' {
     sticker?: Sticker
   }
 }
+
+declare module './internal.ts' {
+  interface Internal {
+    /**
+     * Use this method to send static .WEBP, animated .TGS, or video .WEBM stickers. On success, the sent Message is returned.
+     * @see https://core.telegram.org/bots/api#sendsticker
+     */
+    sendSticker(payload: SendStickerPayload): Promise<Message>
+    /**
+     * Use this method to get a sticker set. On success, a StickerSet object is returned.
+     * @see https://core.telegram.org/bots/api#getstickerset
+     */
+    getStickerSet(payload: GetStickerSetPayload): Promise<StickerSet>
+    /**
+     * Use this method to upload a .PNG file with a sticker for later use in createNewStickerSet and addStickerToSet methods (can be used multiple times). Returns the uploaded File on success.
+     * @see https://core.telegram.org/bots/api#uploadstickerfile
+     */
+    uploadStickerFile(payload: UploadStickerFilePayload): Promise<File>
+    /**
+     * Use this method to create a new sticker set owned by a user. The bot will be able to edit the sticker set thus created. You must use exactly one of the fields png_sticker, tgs_sticker, or webm_sticker. Returns True on success.
+     * @see https://core.telegram.org/bots/api#createnewstickerset
+     */
+    createNewStickerSet(payload: CreateNewStickerSetPayload): Promise<boolean>
+    /**
+     * Use this method to add a new sticker to a set created by the bot. You must use exactly one of the fields png_sticker, tgs_sticker, or webm_sticker. Animated stickers can be added to animated sticker sets and only to them. Animated sticker sets can have up to 50 stickers. Static sticker sets can have up to 120 stickers. Returns True on success.
+     * @see https://core.telegram.org/bots/api#addstickertoset
+     */
+    addStickerToSet(payload: AddStickerToSetPayload): Promise<boolean>
+    /**
+     * Use this method to move a sticker in a set created by the bot to a specific position. Returns True on success.
+     * @see https://core.telegram.org/bots/api#setstickerpositioninset
+     */
+    setStickerPositionInSet(payload: SetStickerPositionInSetPayload): Promise<boolean>
+    /**
+     * Use this method to delete a sticker from a set created by the bot. Returns True on success.
+     * @see https://core.telegram.org/bots/api#deletestickerfromset
+     */
+    deleteStickerFromSet(payload: DeleteStickerFromSetPayload): Promise<boolean>
+    /**
+     * Use this method to set the thumbnail of a sticker set. Animated thumbnails can be set for animated sticker sets only. Video thumbnails can be set only for video sticker sets only. Returns True on success.
+     * @see https://core.telegram.org/bots/api#setstickersetthumb
+     */
+    setStickerSetThumb(payload: SetStickerSetThumbPayload): Promise<boolean>
+  }
+}
+
+Internal.define('sendSticker')
+Internal.define('getStickerSet')
+Internal.define('uploadStickerFile')
+Internal.define('createNewStickerSet')
+Internal.define('addStickerToSet')
+Internal.define('setStickerPositionInSet')
+Internal.define('deleteStickerFromSet')
+Internal.define('setStickerSetThumb')

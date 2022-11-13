@@ -1,4 +1,6 @@
-import { InlineKeyboardMarkup, Integer, MessageEntity, PhotoSize, User } from './index.ts'
+// deno-lint-ignore-file no-explicit-any
+import { InlineKeyboardMarkup, Integer, Internal, Message, MessageEntity, PhotoSize, User } from './index.ts'
+import type {} from './internal.ts'
 
 export interface SendGamePayload {
   /** Unique identifier for the target chat */
@@ -40,7 +42,6 @@ export interface Game {
  * A placeholder, currently holds no information. Use BotFather to set up your game.
  * @see https://core.telegram.org/bots/api#callbackgame
  */
-// deno-lint-ignore no-explicit-any
 export type CallbackGame = any
 
 export interface SetGameScorePayload {
@@ -83,3 +84,29 @@ export interface GameHighScore {
   /** Score */
   score?: Integer
 }
+
+declare module './internal.ts' {
+  interface Internal {
+    /**
+     * Use this method to send a game. On success, the sent Message is returned.
+     * @see https://core.telegram.org/bots/api#sendgame
+     */
+    sendGame(payload: SendGamePayload): Promise<Message>
+    /**
+     * Use this method to set the score of the specified user in a game message. On success, if the message is not an inline message, the Message is returned, otherwise True is returned. Returns an error, if the new score is not greater than the user's current score in the chat and force is False.
+     * @see https://core.telegram.org/bots/api#setgamescore
+     */
+    setGameScore(payload: SetGameScorePayload): Promise<Message | boolean>
+    /**
+     * Use this method to get data for high score tables. Will return the score of the specified user and several of their neighbors in a game. On success, returns an GameHighScore objects.
+     *
+     * This method will currently return scores for the target user, plus two of their closest neighbors on each side. Will also return the top three users if the user and his neighbors are not among them. Please note that this behavior is subject to change.
+     * @see https://core.telegram.org/bots/api#getgamehighscores
+     */
+    getGameHighScores(payload: GetGameHighScoresPayload): Promise<GameHighScore>
+  }
+}
+
+Internal.define('sendGame')
+Internal.define('setGameScore')
+Internal.define('getGameHighScores')
