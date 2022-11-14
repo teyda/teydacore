@@ -16,7 +16,7 @@ declare module '../../deps.ts' {
                 set_name: string
             }
         }
-        'telegram.animation':{
+        'telegram.animation': {
             type: 'telegram.animation'
             data: {
                 file_id: string
@@ -184,7 +184,7 @@ interface payload {
     reply_to_message_id?: number
 }
 
-export async function onebot2telegram(segs: Message): Promise<[payload | FormData, method]> {
+export async function onebot2telegram(segs: Message, internal: TelegramType.Internal): Promise<[payload | FormData, method]> {
     const payload: payload = {}
     let offset = 0
     for (const seg of segs) {
@@ -293,14 +293,30 @@ export async function onebot2telegram(segs: Message): Promise<[payload | FormDat
                 return [payload, assetApi[seg.type]]
             }
             case 'mention': {
-                const length = seg.data['telegram.text'].length
                 if (!payload.text) {
                     payload.text = ''
                 }
                 if (!payload.entities) {
                     payload.entities = []
                 }
-                payload.text += seg.data['telegram.text']
+                let length: number
+                if (seg.data.user_id === '') {
+                    payload.text += seg.data['telegram.text']
+                    length = seg.data['telegram.text'].length
+                } else {
+                    const result = await internal.getChat({
+                        chat_id: seg.data.user_id
+                    })
+                    if (result.username) {
+                        const text = `@${result.username}`
+                        payload.text += text
+                        length = text.length
+                    } else {
+                        const text = result.last_name ? `${result.first_name} ${result.last_name}` : result.first_name!
+                        payload.text += text
+                        length = text.length
+                    }
+                }
                 offset = offset + length
                 payload.entities.push({
                     type: 'mention',

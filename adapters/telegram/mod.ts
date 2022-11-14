@@ -73,7 +73,7 @@ export class Telegram extends Adapter<TelegramConfig> {
                         echo: data.echo,
                     }
             }
-        })
+        }, () => { this.ob.send(this.status_update_event()) })
     }
     private polling() {
         const get_updates = () => {
@@ -83,7 +83,7 @@ export class Telegram extends Adapter<TelegramConfig> {
             }).then(data => {
                 for (const update of data) {
                     this._offset = Math.max(this._offset, update.update_id!)
-                    //console.log(update)
+                    console.log(update)
                     this.telegram2onebot(update)
                 }
                 this.change_online(true)
@@ -102,7 +102,7 @@ export class Telegram extends Adapter<TelegramConfig> {
                 this.running = true
                 this.ob.start({
                     basic: {
-                        onebot_version: 12,
+                        onebot_version: '12',
                         impl: "teyda",
                     },
                     ...this.config.connect,
@@ -115,10 +115,8 @@ export class Telegram extends Adapter<TelegramConfig> {
         }
         get_me()
     }
-    private change_online(bool: boolean) {
-        if (bool === this.online) return
-        this.online = bool
-        const event: AllEvents = {
+    private status_update_event(): AllEvents {
+        return {
             id: crypto.randomUUID(),
             time: new Date().getTime() / 1000,
             type: 'meta',
@@ -135,7 +133,11 @@ export class Telegram extends Adapter<TelegramConfig> {
                 }]
             }
         }
-        this.ob.send(event)
+    }
+    private change_online(bool: boolean) {
+        if (bool === this.online) return
+        this.online = bool
+        this.ob.send(this.status_update_event())
     }
     private telegram2onebot(e: TelegramType.Update) {
         if (e.message) {

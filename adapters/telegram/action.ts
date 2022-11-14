@@ -52,7 +52,7 @@ export class ActionHandler {
             default:
                 return default_fail_resp(data.echo)
         }
-        const [payload, method] = await onebot2telegram(data.params.message)
+        const [payload, method] = await onebot2telegram(data.params.message, this.internal)
         let all_payload
         if (payload instanceof FormData) {
             payload.append('chat_id', chat_id)
