@@ -4,7 +4,7 @@ const config: TeydacoreConfig = {
     telegram: [{
         token: '',
         connect: {
-            wsr: [{
+            ws: [{
                 host: '127.0.0.1',
                 port: 9501,
                 send_msgpack: false
