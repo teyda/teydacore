@@ -15,9 +15,6 @@ export class Internal {
         if (data instanceof FormData) {
           response = await fetch(`${this.endpoint}/${method}`, {
             method: "POST",
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
             body: data
           })
         } else {

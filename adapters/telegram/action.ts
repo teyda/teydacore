@@ -52,15 +52,15 @@ export class ActionHandler {
             default:
                 return default_fail_resp(data.echo)
         }
-        const [payload, method] = await onebot2telegram(data.params.message, this.internal)
-        let all_payload
-        if (payload instanceof FormData) {
-            payload.append('chat_id', chat_id)
-            all_payload = payload
-        } else {
-            all_payload = { chat_id, ...payload }
-        }
         try {
+            const [payload, method] = await onebot2telegram(data.params.message, this.internal)
+            let all_payload
+            if (payload instanceof FormData) {
+                payload.append('chat_id', chat_id)
+                all_payload = payload
+            } else {
+                all_payload = { chat_id, ...payload }
+            }
             // deno-lint-ignore no-explicit-any
             const result = await this.internal[method](all_payload as any)
             return success_resp({

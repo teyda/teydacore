@@ -83,7 +83,7 @@ export class Telegram extends Adapter<TelegramConfig> {
             }).then(data => {
                 for (const update of data) {
                     this._offset = Math.max(this._offset, update.update_id!)
-                    console.log(update)
+                    //console.log(update)
                     this.telegram2onebot(update)
                 }
                 this.change_online(true)

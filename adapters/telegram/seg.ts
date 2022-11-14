@@ -200,13 +200,13 @@ export async function onebot2telegram(segs: Message, internal: TelegramType.Inte
                     const file_info = await Deno.lstat(`./teyda_data/${target[1]}`)
                     if (file_info.isFile) {
                         const file_data = await Deno.readFile(`./teyda_data/${target[1]}`)
-                        form_data.append('photo', new Blob([file_data.buffer]))
+                        form_data.append('photo', new Blob([file_data.buffer]), target[1])
                     }
+                    return [form_data, assetApi[seg.type]]
                 } else {
                     payload.photo = seg.data.file_id
                     return [payload, assetApi[seg.type]]
                 }
-                break
             }
             case 'file': {
                 const target = seg.data.file_id.split('/')
