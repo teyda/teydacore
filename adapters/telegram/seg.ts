@@ -1,5 +1,5 @@
 import * as TelegramType from './types/index.ts'
-import { MessageSegmentsDetail, Message } from '../../deps.ts'
+import { Message } from '../../deps.ts'
 
 declare module '../../deps.ts' {
     namespace MessageSegmentsDetail {
@@ -25,52 +25,64 @@ declare module '../../deps.ts' {
     }
 }
 
-export function telegram2onebot(message: TelegramType.Message): Message {
+export function telegram2onebot(message: TelegramType.Message, info: TelegramType.User): Message {
     const parseText = (text: string, entities: TelegramType.MessageEntity[]): Message => {
         let curr = 0
         const segs: Message = []
         for (const e of entities) {
-            const eText = text.substr(e.offset!, e.length)
+            const eText = text.substring(e.offset!, e.offset! + e.length!)
             if (e.type === 'mention') {
-                const seg: MessageSegmentsDetail.Mention = {
-                    type: 'mention',
-                    data: {
-                        user_id: '',
-                        'telegram.text': eText.slice(1)
-                    }
+                if (eText === `@${info.username}`) {
+                    segs.push({
+                        type: 'mention',
+                        data: {
+                            user_id: info.id!.toString(),
+                            'telegram.text': eText
+                        }
+                    })
+                } else {
+                    segs.push({
+                        type: 'mention',
+                        data: {
+                            user_id: '',
+                            'telegram.text': eText
+                        }
+                    })
                 }
-                segs.push(seg)
+                if (e.offset === 0) {
+                    curr += e.length!
+                }
             } else if (e.type === 'text_mention') {
-                const seg: MessageSegmentsDetail.Mention = {
+                segs.push({
                     type: 'mention',
                     data: {
                         user_id: e.user?.id?.toString()!,
-                        'telegram.text': eText.slice(1)
+                        'telegram.text': eText
                     }
+                })
+                if (e.offset === 0) {
+                    curr += e.length!
                 }
-                segs.push(seg)
             } else {
                 continue
             }
             if (e.offset! > curr) {
-                const seg: MessageSegmentsDetail.Text = {
+                segs.splice(-1, 0, {
                     type: 'text',
                     data: {
                         text: text.slice(curr, e.offset)
                     }
-                }
-                segs.splice(-1, 0, seg)
+                })
                 curr = e.offset! + e.length!
             }
         }
         if (curr < text?.length || 0) {
-            const seg: MessageSegmentsDetail.Text = {
+            segs.push({
                 type: 'text',
                 data: {
                     text: text.slice(curr)
                 }
-            }
-            segs.push(seg)
+            })
         }
         return segs
     }

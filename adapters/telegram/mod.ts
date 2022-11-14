@@ -31,7 +31,7 @@ export class Telegram extends Adapter<TelegramConfig> {
         super(config)
         this.internal = new TelegramType.Internal(`https://api.telegram.org/bot${this.config.token}`)
         this.ah = new ActionHandler(this, this.internal)
-        this.eh = new EventHandler(this, this.internal)
+        this.eh = new EventHandler(this)
         this.ob = new OneBot(async (data, send_msgpack) => {
             switch (data.action) {
                 case 'get_supported_actions':
@@ -73,7 +73,7 @@ export class Telegram extends Adapter<TelegramConfig> {
                         echo: data.echo,
                     }
             }
-        }, () => { this.ob.send(this.status_update_event()) })
+        }, () => { this.ob.send(this.eh.meta.statusUpdate()) })
     }
     private polling() {
         const get_updates = () => {
@@ -115,34 +115,15 @@ export class Telegram extends Adapter<TelegramConfig> {
         }
         get_me()
     }
-    private status_update_event(): AllEvents {
-        return {
-            id: crypto.randomUUID(),
-            time: new Date().getTime() / 1000,
-            type: 'meta',
-            detail_type: 'status_update',
-            sub_type: '',
-            status: {
-                good: this.online && this.running,
-                bots: [{
-                    self: {
-                        platform: 'telegram',
-                        user_id: this.info?.id?.toString()!
-                    },
-                    online: this.online
-                }]
-            }
-        }
-    }
     private change_online(bool: boolean) {
         if (bool === this.online) return
         this.online = bool
-        this.ob.send(this.status_update_event())
+        this.ob.send(this.eh.meta.statusUpdate())
     }
     private telegram2onebot(e: TelegramType.Update) {
         if (e.message) {
             if (e.message.text || e.message.location || e.message.photo || e.message.sticker || e.message.animation || e.message.voice || e.message.video || e.message.document || e.message.audio) {
-                let payload
+                let payload: AllEvents | undefined
                 switch (e.message.chat?.type) {
                     case 'private': {
                         payload = this.eh.message.private(e.message)
