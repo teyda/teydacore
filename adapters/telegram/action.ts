@@ -19,51 +19,43 @@ export class ActionHandler {
     }
     getSupportedActions(data: Action): AllResps {
         if (data.action == 'send_message') { data.params.channel_id }
-        return {
-            status: "ok",
-            retcode: 0,
-            data: Object.keys(this.tg.support_action),
-            message: "",
-            echo: data.echo ? data.echo : "",
-        }
+        return success_resp(Object.keys(this.tg.support_action), data.echo)
     }
     getStatus(data: Action): AllResps {
-        return {
-            status: "ok",
-            retcode: 0,
-            data: {
-                good: this.tg.online && this.tg.running,
-                bots: [{
-                    self: {
-                        platform: 'telegram',
-                        user_id: this.tg.info?.id?.toString()!
-                    },
-                    online: this.tg.online
-                }]
-            },
-            message: "",
-            echo: data.echo ? data.echo : "",
-        }
+        return success_resp({
+            good: this.tg.online && this.tg.running,
+            bots: [{
+                self: {
+                    platform: 'telegram',
+                    user_id: this.tg.info?.id?.toString()!
+                },
+                online: this.tg.online
+            }]
+        }, data.echo)
     }
     getVersion(data: Action): AllResps {
-        return {
-            status: "ok",
-            retcode: 0,
-            data: {
-                impl: 'teyda',
-                version: VERSION,
-                onebot_version: '12'
-            },
-            message: "",
-            echo: data.echo ? data.echo : "",
-        }
+        return success_resp({
+            impl: 'teyda',
+            version: VERSION,
+            onebot_version: '12'
+        }, data.echo)
     }
     async sendMessage(data: Action<'send_message'>): Promise<AllResps> {
-        const chat_id = data.params.user_id || data.params.group_id
+        let chat_id: string
+        switch (data.params.detail_type) {
+            case 'private':
+                chat_id = data.params.user_id!
+                break
+            case 'group':
+                chat_id = data.params.group_id!
+                break
+            default:
+                return default_fail_resp(data.echo)
+        }
         const [payload, method] = await onebot2telegram(data.params.message)
         let all_payload
         if (payload instanceof FormData) {
-            payload.append('chat_id', chat_id!)
+            payload.append('chat_id', chat_id)
             all_payload = payload
         } else {
             all_payload = { chat_id, ...payload }
@@ -71,15 +63,10 @@ export class ActionHandler {
         try {
             // deno-lint-ignore no-explicit-any
             const result = await this.internal[method](all_payload as any)
-            return {
-                status: 'ok',
-                retcode: 0,
-                data: {
-                    message_id: `${chat_id}/${result.message_id}`,
-                    time: result.date!
-                },
-                message: ''
-            }
+            return success_resp({
+                message_id: `${chat_id}/${result.message_id}`,
+                time: result.date!
+            }, data.echo)
         } catch {
             return default_fail_resp(data.echo)
         }
@@ -99,17 +86,11 @@ export class ActionHandler {
     async getSelfInfo(data: Action<'get_self_info'>): Promise<AllResps> {
         try {
             const result = await this.internal.getMe()
-            return {
-                status: 'ok',
-                data: {
-                    user_id: result.id?.toString()!,
-                    user_name: result.username!,
-                    user_displayname: result.last_name ? `${result.first_name} ${result.last_name}` : result.first_name!
-                },
-                retcode: 0,
-                message: '',
-                echo: data.echo ? data.echo : "",
-            }
+            return success_resp({
+                user_id: result.id?.toString()!,
+                user_name: result.username!,
+                user_displayname: result.last_name ? `${result.first_name} ${result.last_name}` : result.first_name!
+            }, data.echo)
         } catch {
             return default_fail_resp(data.echo)
         }
@@ -119,18 +100,12 @@ export class ActionHandler {
             const result = await this.internal.getChat({
                 chat_id: data.params.user_id
             })
-            return {
-                status: 'ok',
-                data: {
-                    user_id: result.id?.toString()!,
-                    user_name: result.username!,
-                    user_displayname: result.last_name ? `${result.first_name} ${result.last_name}` : result.first_name!,
-                    user_remark: ''
-                },
-                retcode: 0,
-                message: '',
-                echo: data.echo ? data.echo : "",
-            }
+            return success_resp({
+                user_id: result.id?.toString()!,
+                user_name: result.username!,
+                user_displayname: result.last_name ? `${result.first_name} ${result.last_name}` : result.first_name!,
+                user_remark: ''
+            }, data.echo)
         } catch {
             return default_fail_resp(data.echo)
         }
@@ -140,16 +115,10 @@ export class ActionHandler {
             const result = await this.internal.getChat({
                 chat_id: data.params.group_id
             })
-            return {
-                status: 'ok',
-                data: {
-                    group_id: result.id?.toString()!,
-                    group_name: result.title!
-                },
-                retcode: 0,
-                message: '',
-                echo: data.echo ? data.echo : "",
-            }
+            return success_resp({
+                group_id: result.id?.toString()!,
+                group_name: result.title!
+            }, data.echo)
         } catch {
             return default_fail_resp(data.echo)
         }
@@ -160,17 +129,11 @@ export class ActionHandler {
                 chat_id: data.params.group_id,
                 user_id: parseInt(data.params.user_id)
             })
-            return {
-                status: 'ok',
-                data: {
-                    user_id: result.user?.id?.toString()!,
-                    user_name: result.user?.username!,
-                    user_displayname: result.user?.last_name ? `${result.user?.first_name} ${result.user?.last_name}` : result.user?.first_name!,
-                },
-                retcode: 0,
-                message: '',
-                echo: data.echo ? data.echo : "",
-            }
+            return success_resp({
+                user_id: result.user?.id?.toString()!,
+                user_name: result.user?.username!,
+                user_displayname: result.user?.last_name ? `${result.user?.first_name} ${result.user?.last_name}` : result.user?.first_name!,
+            }, data.echo)
         } catch {
             return default_fail_resp(data.echo)
         }
@@ -233,15 +196,9 @@ export class ActionHandler {
                     const file = await Deno.open(`./teyda_data/${file_name}`, { read: true, write: true, create: true })
                     await Deno.ftruncate(file.rid, data.params.total_size)
                     file.close()
-                    return {
-                        status: 'ok',
-                        data: {
-                            file_id: `td/${file_name}`
-                        },
-                        retcode: 0,
-                        message: '',
-                        echo: data.echo ? data.echo : '',
-                    }
+                    return success_resp({
+                        file_id: `td/${file_name}`
+                    }, data.echo)
                 }
                 case 'transfer': {
                     const target = data.params.file_id.split('/')
@@ -273,15 +230,9 @@ export class ActionHandler {
                     }
                     const file_name = target[1].replace('temp_', '')
                     await Deno.rename(`./teyda_data/${target[1]}`, `./teyda_data/${file_name}`)
-                    return {
-                        status: 'ok',
-                        data: {
-                            file_id: `td/${file_name}`
-                        },
-                        retcode: 0,
-                        message: '',
-                        echo: data.echo ? data.echo : '',
-                    }
+                    return success_resp({
+                        file_id: `td/${file_name}`
+                    }, data.echo)
                 }
                 default:
                     return default_fail_resp(data.echo)
@@ -303,17 +254,11 @@ export class ActionHandler {
                         const file_data = await Deno.readFile(`./teyda_data/${target[1]}`)
                         const digest = await crypto.subtle.digest("SHA-256", file_data.buffer)
                         const sha256 = uint8ArrayToHexString(new Uint8Array(digest))
-                        return {
-                            status: 'ok',
-                            data: {
-                                name: target[1],
-                                sha256,
-                                url: `data:${contentType(target[1])};base64,${base64Encode(file_data.buffer)}`
-                            },
-                            retcode: 0,
-                            message: '',
-                            echo: data.echo ? data.echo : "",
-                        }
+                        return success_resp({
+                            name: target[1],
+                            sha256,
+                            url: `data:${contentType(target[1])};base64,${base64Encode(file_data.buffer)}`
+                        }, data.echo)
                     } else if (target[0] === 'tg') {
                         const result = await this.internal.getFile({
                             file_id: target[1]
@@ -323,17 +268,11 @@ export class ActionHandler {
                         const digest = await crypto.subtle.digest("SHA-256", file_data)
                         const sha256 = uint8ArrayToHexString(new Uint8Array(digest))
                         const name = basename(result.file_path!)
-                        return {
-                            status: 'ok',
-                            data: {
-                                name,
-                                sha256,
-                                url: `data:${contentType(name)};base64,${base64Encode(file_data)}`
-                            },
-                            retcode: 0,
-                            message: '',
-                            echo: data.echo ? data.echo : "",
-                        }
+                        return success_resp({
+                            name,
+                            sha256,
+                            url: `data:${contentType(name)};base64,${base64Encode(file_data)}`
+                        }, data.echo)
                     }
                     break
                 }
@@ -349,17 +288,11 @@ export class ActionHandler {
                         const name = `tg_${sha256}${extname(result.file_path!)}`
                         await ensureDir("./teyda_data")
                         await Deno.writeFile(`./teyda_data/${name}`, new Uint8Array(file_data))
-                        return {
-                            status: 'ok',
-                            data: {
-                                name,
-                                sha256,
-                                path: await Deno.realPath(`./teyda_data/${name}`)
-                            },
-                            retcode: 0,
-                            message: '',
-                            echo: data.echo ? data.echo : "",
-                        }
+                        return success_resp({
+                            name,
+                            sha256,
+                            path: await Deno.realPath(`./teyda_data/${name}`)
+                        }, data.echo)
                     } else if (target[0] === 'td') {
                         const file_info = await Deno.lstat(`./teyda_data/${target[1]}`)
                         if (!file_info.isFile) {
@@ -368,17 +301,11 @@ export class ActionHandler {
                         const file_data = await Deno.readFile(`./teyda_data/${target[1]}`)
                         const digest = await crypto.subtle.digest("SHA-256", file_data.buffer)
                         const sha256 = uint8ArrayToHexString(new Uint8Array(digest))
-                        return {
-                            status: 'ok',
-                            data: {
-                                name: target[1],
-                                sha256,
-                                path: await Deno.realPath(`./teyda_data/${target[1]}`)
-                            },
-                            retcode: 0,
-                            message: '',
-                            echo: data.echo ? data.echo : "",
-                        }
+                        return success_resp({
+                            name: target[1],
+                            sha256,
+                            path: await Deno.realPath(`./teyda_data/${target[1]}`)
+                        }, data.echo)
                     }
                     break
                 }
@@ -391,17 +318,11 @@ export class ActionHandler {
                         const file_data = await file.arrayBuffer()
                         const digest = await crypto.subtle.digest("SHA-256", file_data)
                         const sha256 = uint8ArrayToHexString(new Uint8Array(digest))
-                        return {
-                            status: 'ok',
-                            data: {
-                                name: basename(result.file_path!),
-                                data: send_msgpack ? file_data : base64Encode(file_data),
-                                sha256
-                            },
-                            retcode: 0,
-                            message: '',
-                            echo: data.echo ? data.echo : "",
-                        }
+                        return success_resp({
+                            name: basename(result.file_path!),
+                            data: send_msgpack ? file_data : base64Encode(file_data),
+                            sha256
+                        }, data.echo)
                     } else if (target[0] === 'td') {
                         const file_info = await Deno.lstat(`./teyda_data/${target[1]}`)
                         if (!file_info.isFile) {
@@ -410,17 +331,11 @@ export class ActionHandler {
                         const file_data = await Deno.readFile(`./teyda_data/${target[1]}`)
                         const digest = await crypto.subtle.digest("SHA-256", file_data.buffer)
                         const sha256 = uint8ArrayToHexString(new Uint8Array(digest))
-                        return {
-                            status: 'ok',
-                            data: {
-                                name: target[1],
-                                data: send_msgpack ? file_data.buffer : base64Encode(file_data.buffer),
-                                sha256
-                            },
-                            retcode: 0,
-                            message: '',
-                            echo: data.echo ? data.echo : "",
-                        }
+                        return success_resp({
+                            name: target[1],
+                            data: send_msgpack ? file_data.buffer : base64Encode(file_data.buffer),
+                            sha256
+                        }, data.echo)
                     }
                     break
                 }
@@ -448,17 +363,11 @@ export class ActionHandler {
                         await ensureDir("./teyda_data")
                         await Deno.writeFile(`./teyda_data/${target[1]}`, new Uint8Array(file_data))
                         const file_info = await Deno.lstat(`./teyda_data/${target[1]}`)
-                        return {
-                            status: 'ok',
-                            data: {
-                                name: basename(result.file_path!),
-                                total_size: file_info.size,
-                                sha256
-                            },
-                            retcode: 0,
-                            message: '',
-                            echo: data.echo ? data.echo : "",
-                        }
+                        return success_resp({
+                            name: basename(result.file_path!),
+                            total_size: file_info.size,
+                            sha256
+                        }, data.echo)
                     } else if (target[0] === 'td') {
                         const file_info = await Deno.lstat(`./teyda_data/${target[1]}`)
                         if (!file_info.isFile) {
@@ -467,17 +376,11 @@ export class ActionHandler {
                         const file_data = await Deno.readFile(`./teyda_data/${target[1]}`)
                         const digest = await crypto.subtle.digest("SHA-256", file_data.buffer)
                         const sha256 = uint8ArrayToHexString(new Uint8Array(digest))
-                        return {
-                            status: 'ok',
-                            data: {
-                                name: target[1],
-                                sha256,
-                                total_size: file_info.size
-                            },
-                            retcode: 0,
-                            message: '',
-                            echo: data.echo ? data.echo : "",
-                        }
+                        return success_resp({
+                            name: target[1],
+                            sha256,
+                            total_size: file_info.size
+                        }, data.echo)
                     }
                     break
                 case 'transfer': {
@@ -490,15 +393,9 @@ export class ActionHandler {
                     const buf = new Uint8Array(data.params.size)
                     await file.read(buf)
                     file.close()
-                    return {
-                        status: 'ok',
-                        data: {
-                            data: send_msgpack ? buf.buffer : base64Encode(buf.buffer)
-                        },
-                        retcode: 0,
-                        message: '',
-                        echo: data.echo ? data.echo : "",
-                    }
+                    return success_resp({
+                        data: send_msgpack ? buf.buffer : base64Encode(buf.buffer)
+                    }, data.echo)
                 }
                 default:
                     return default_fail_resp(data.echo)
@@ -538,6 +435,16 @@ function default_success_resp(echo: string | undefined): AllResps {
         message: '',
         echo: echo ? echo : '',
     }
+}
+
+function success_resp<T extends AllResps['data']>(data: T, echo: string | undefined) {
+    return {
+        status: 'ok',
+        data,
+        retcode: 0,
+        message: '',
+        echo: echo ? echo : '',
+    } as const
 }
 
 /*function not_executed_fail_resp(echo: string | undefined, description: string): AllResps {
