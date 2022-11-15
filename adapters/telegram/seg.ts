@@ -317,27 +317,47 @@ export async function onebot2telegram(segs: Message, internal: TelegramType.Inte
                     payload.text += seg.data['telegram.text']
                     length = seg.data['telegram.text'].length
                 } else {
-                    const result = await internal.getChat({
-                        chat_id: seg.data.user_id
-                    })
-                    if (result.username) {
-                        const text = `@${result.username}`
-                        payload.text += text
-                        length = text.length
+                    if (seg.data['telegram.text'] && seg.data['telegram.text'] !== '') {
+                        if (seg.data['telegram.text'][0] === '@') {
+                            payload.text += seg.data['telegram.text']
+                            length = seg.data['telegram.text'].length
+                        } else {
+                            payload.text += seg.data['telegram.text']
+                            length = seg.data['telegram.text'].length
+                            payload.entities.push({
+                                type: 'text_mention',
+                                offset,
+                                length,
+                                user: {
+                                    id: parseInt(seg.data.user_id)
+                                }
+                            })
+                            offset += length
+                            text_mention = true
+                        }
                     } else {
-                        const text = result.last_name ? `${result.first_name} ${result.last_name}` : result.first_name!
-                        payload.text += text
-                        length = text.length
-                        payload.entities.push({
-                            type: 'text_mention',
-                            offset,
-                            length,
-                            user: {
-                                id: result.id
-                            }
+                        const result = await internal.getChat({
+                            chat_id: seg.data.user_id
                         })
-                        offset += length
-                        text_mention = true
+                        if (result.username) {
+                            const text = `@${result.username}`
+                            payload.text += text
+                            length = text.length
+                        } else {
+                            const text = result.last_name ? `${result.first_name} ${result.last_name}` : result.first_name!
+                            payload.text += text
+                            length = text.length
+                            payload.entities.push({
+                                type: 'text_mention',
+                                offset,
+                                length,
+                                user: {
+                                    id: result.id
+                                }
+                            })
+                            offset += length
+                            text_mention = true
+                        }
                     }
                 }
                 if (!text_mention) {
