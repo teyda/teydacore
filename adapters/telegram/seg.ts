@@ -179,9 +179,9 @@ const assetApi = {
 
 type ValueOf<T> = T[keyof T]
 
-type method = ValueOf<typeof assetApi> | 'sendMessage'
+type Method = ValueOf<typeof assetApi> | 'sendMessage'
 
-interface payload {
+interface Payload {
     photo?: string
     document?: string
     animation?: string
@@ -196,8 +196,8 @@ interface payload {
     reply_to_message_id?: number
 }
 
-export async function onebot2telegram(segs: Message, internal: TelegramType.Internal): Promise<[payload | FormData, method]> {
-    const payload: payload = {}
+export async function onebot2telegram(segs: Message, internal: TelegramType.Internal): Promise<[Payload | FormData, Method]> {
+    const payload: Payload = {}
     let offset = 0
     for (const seg of segs) {
         switch (seg.type) {
@@ -229,11 +229,11 @@ export async function onebot2telegram(segs: Message, internal: TelegramType.Inte
                         const file_data = await Deno.readFile(`./teyda_data/${target[1]}`)
                         form_data.append('document', new Blob([file_data.buffer]))
                     }
+                    return [form_data, assetApi[seg.type]]
                 } else {
                     payload.document = seg.data.file_id
                     return [payload, assetApi[seg.type]]
                 }
-                break
             }
             case 'telegram.animation': {
                 const target = seg.data.file_id.split('/')
@@ -244,11 +244,11 @@ export async function onebot2telegram(segs: Message, internal: TelegramType.Inte
                         const file_data = await Deno.readFile(`./teyda_data/${target[1]}`)
                         form_data.append('animation', new Blob([file_data.buffer]))
                     }
+                    return [form_data, assetApi[seg.type]]
                 } else {
                     payload.animation = seg.data.file_id
                     return [payload, assetApi[seg.type]]
                 }
-                break
             }
             case 'audio': {
                 const target = seg.data.file_id.split('/')
@@ -259,11 +259,11 @@ export async function onebot2telegram(segs: Message, internal: TelegramType.Inte
                         const file_data = await Deno.readFile(`./teyda_data/${target[1]}`)
                         form_data.append('audio', new Blob([file_data.buffer]))
                     }
+                    return [form_data, assetApi[seg.type]]
                 } else {
                     payload.audio = seg.data.file_id
                     return [payload, assetApi[seg.type]]
                 }
-                break
             }
             case 'video': {
                 const target = seg.data.file_id.split('/')
@@ -274,11 +274,11 @@ export async function onebot2telegram(segs: Message, internal: TelegramType.Inte
                         const file_data = await Deno.readFile(`./teyda_data/${target[1]}`)
                         form_data.append('video', new Blob([file_data.buffer]))
                     }
+                    return [form_data, assetApi[seg.type]]
                 } else {
                     payload.video = seg.data.file_id
                     return [payload, assetApi[seg.type]]
                 }
-                break
             }
             case 'voice': {
                 const target = seg.data.file_id.split('/')
@@ -289,11 +289,11 @@ export async function onebot2telegram(segs: Message, internal: TelegramType.Inte
                         const file_data = await Deno.readFile(`./teyda_data/${target[1]}`)
                         form_data.append('voice', new Blob([file_data.buffer]))
                     }
+                    return [form_data, assetApi[seg.type]]
                 } else {
                     payload.voice = seg.data.file_id
                     return [payload, assetApi[seg.type]]
                 }
-                break
             }
             case 'location': {
                 payload.latitude = seg.data.latitude
@@ -312,6 +312,7 @@ export async function onebot2telegram(segs: Message, internal: TelegramType.Inte
                     payload.entities = []
                 }
                 let length: number
+                let text_mention = false
                 if (seg.data.user_id === '') {
                     payload.text += seg.data['telegram.text']
                     length = seg.data['telegram.text'].length
@@ -327,14 +328,26 @@ export async function onebot2telegram(segs: Message, internal: TelegramType.Inte
                         const text = result.last_name ? `${result.first_name} ${result.last_name}` : result.first_name!
                         payload.text += text
                         length = text.length
+                        payload.entities.push({
+                            type: 'text_mention',
+                            offset,
+                            length,
+                            user: {
+                                id: result.id
+                            }
+                        })
+                        offset += length
+                        text_mention = true
                     }
                 }
-                offset = offset + length
-                payload.entities.push({
-                    type: 'mention',
-                    offset: offset,
-                    length
-                })
+                if (!text_mention) {
+                    payload.entities.push({
+                        type: 'mention',
+                        offset,
+                        length
+                    })
+                    offset += length
+                }
                 break
             }
             case 'text': {
@@ -342,7 +355,7 @@ export async function onebot2telegram(segs: Message, internal: TelegramType.Inte
                     payload.text = ''
                 }
                 payload.text += seg.data.text
-                offset = offset + seg.data.text.length
+                offset += seg.data.text.length
                 break
             }
         }

@@ -18,6 +18,7 @@ export class Internal {
             body: data
           })
         } else {
+          //console.log(data)
           response = await fetch(`${this.endpoint}/${method}`, {
             method: "POST",
             headers: {
@@ -31,6 +32,7 @@ export class Internal {
         if (res_data.ok) return res_data.result
         throw new Error(`Telegram API error ${res_data.error_code}. ${res_data.description}`)
       } catch (err) {
+        //console.log(err)
         throw err
       }
     }
