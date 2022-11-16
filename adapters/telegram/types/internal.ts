@@ -6,7 +6,7 @@ export interface Internal extends Record<string, any> { }
 const logger = new Logger('telegram')
 
 export class Internal {
-  constructor(public endpoint: string) { }
+  constructor(private endpoint: string) { }
   static define(method: string) {
     Internal.prototype[method] = async function (this: Internal, data = {}) {
       logger.debug('[request] %s %o', method, data)

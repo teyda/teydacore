@@ -1,7 +1,7 @@
 import {
-    OneBot,
+    DnlibobApp,
     AllEvents,
-    OneBotConfig,
+    DnlibobAppConfig,
 } from '../../deps.ts'
 import { Adapter } from "../../adapter.ts"
 import * as TelegramType from './types/index.ts'
@@ -12,13 +12,13 @@ import { EventHandler } from './event.ts'
 export interface TelegramConfig extends AdapterConfig {
     token: string
     connect: {
-        ws?: OneBotConfig["ws"]
-        wsr?: OneBotConfig["wsr"]
+        ws?: DnlibobAppConfig["ws"]
+        wsr?: DnlibobAppConfig["wsr"]
     }
 }
 
 export class Telegram extends Adapter<TelegramConfig> {
-    private ob: OneBot
+    private ob: DnlibobApp
     public running = false
     public online = false
     private _offset = 0
@@ -32,7 +32,7 @@ export class Telegram extends Adapter<TelegramConfig> {
         this.internal = new TelegramType.Internal(`https://api.telegram.org/bot${this.config.token}`)
         this.ah = new ActionHandler(this, this.internal)
         this.eh = new EventHandler(this)
-        this.ob = new OneBot(async (data, send_msgpack) => {
+        this.ob = new DnlibobApp(async (data, send_msgpack) => {
             switch (data.action) {
                 case 'get_supported_actions':
                     return this.ah.getSupportedActions(data)

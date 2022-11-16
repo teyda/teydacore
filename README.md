@@ -7,4 +7,4 @@
 
 ## 特别鸣谢
 
-部分代码来自 [Satori](https://github.com/satorijs/satori)，透过 MIT 协议进行使用，在此向该项目贡献者致以谢意！
+部分代码来自 [Satori](https://github.com/satorijs/satori)（许可协议[见此](https://github.com/satorijs/satori/blob/master/LICENSE)），在此向该项目贡献者致以谢意！
