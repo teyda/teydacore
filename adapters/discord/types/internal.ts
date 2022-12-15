@@ -5,7 +5,7 @@ type Method = 'GET' | 'DELETE' | 'HEAD' | 'OPTIONS' | 'POST' | 'PUT' | 'PATCH'
 
 export class Internal {
   [index: string]: any
-  constructor(private endpoint: string) { }
+  constructor(private endpoint: string, private token: string) { }
 
   static define(routes: Dict<Partial<Record<Method, string | string[]>>>) {
     for (const path in routes) {
@@ -18,7 +18,12 @@ export class Internal {
               if (!args.length) throw new Error(`too few arguments for ${path}, received ${raw}`)
               return args.shift()
             })
-            const init: RequestInit = {}
+            const init: RequestInit = {
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bot ${this.token}`,
+              }
+            }
             let params = ''
             if (args.length === 1) {
               if (method === 'GET' || method === 'DELETE') {
@@ -33,7 +38,7 @@ export class Internal {
               throw new Error(`too many arguments for ${path}, received ${raw}`)
             }
             const res = await fetch(`${this.endpoint}/${url}${params}`, init)
-            return res.json()
+            return await res.json()
           }
         }
       }

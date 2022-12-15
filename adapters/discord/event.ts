@@ -4,7 +4,6 @@ import {
     Event
 } from '../../deps.ts'
 import { telegram2onebot } from './seg.ts'
-import { VERSION } from '../../version.ts'
 
 export class EventHandler {
     message
@@ -36,20 +35,6 @@ class Meta {
                     },
                     online: this.tg.online
                 }]
-            }
-        }
-    }
-    connect(): Event {
-        return {
-            id: crypto.randomUUID(),
-            time: new Date().getTime() / 1000,
-            type: 'meta',
-            detail_type: 'connect',
-            sub_type: '',
-            version: {
-                impl: 'teyda',
-                version: VERSION,
-                onebot_version: '12'
             }
         }
     }

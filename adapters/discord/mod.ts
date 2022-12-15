@@ -4,12 +4,12 @@ import {
     DnlibobAppConfig,
 } from '../../deps.ts'
 import { Adapter } from "../../adapter.ts"
-import * as TelegramType from './types/index.ts'
+import * as DiscordType from './types/index.ts'
 import { ActionHandler } from './action.ts'
 import { AdapterConfig } from "../../adapter.ts"
 import { EventHandler } from './event.ts'
 
-export interface TelegramConfig extends AdapterConfig {
+export interface DiscordConfig extends AdapterConfig {
     token: string
     connect: {
         ws?: DnlibobAppConfig["ws"]
@@ -17,19 +17,21 @@ export interface TelegramConfig extends AdapterConfig {
     }
 }
 
-export class Telegram extends Adapter<TelegramConfig> {
+export class Discord extends Adapter<DiscordConfig> {
     private ob: DnlibobApp
     public running = false
     public online = false
-    private _offset = 0
+    private _d = 0
+    private _sessionId = ''
+    private _ping: number | undefined
     public readonly support_action = ['get_supported_actions', 'get_status', 'get_version', 'send_message', 'delete_message', 'get_self_info', 'get_user_info', 'get_group_info', 'get_group_member_info', 'set_group_name', 'leave_group', 'upload_file', 'upload_file_fragmented', 'get_file', 'get_file_fragmented']
-    private internal: TelegramType.Internal
+    private internal: DiscordType.Internal
     private ah: ActionHandler
     private eh: EventHandler
-    public info: TelegramType.User | undefined
-    constructor(config: TelegramConfig) {
+    public info: DiscordType.User | undefined
+    constructor(config: DiscordConfig) {
         super(config)
-        this.internal = new TelegramType.Internal(`https://api.telegram.org/bot${this.config.token}`)
+        this.internal = new DiscordType.Internal(`https://discord.com/api/v10`, config.token)
         this.ah = new ActionHandler(this, this.internal)
         this.eh = new EventHandler(this)
         this.ob = new DnlibobApp(async (data, send_msgpack) => {
@@ -73,32 +75,75 @@ export class Telegram extends Adapter<TelegramConfig> {
                         echo: data.echo,
                     }
             }
-        })
+        }, () => { this.ob.send(this.eh.meta.statusUpdate()) })
     }
-    private polling() {
-        const get_updates = () => {
-            this.internal.getUpdates({
-                timeout: 60000,
-                offset: this._offset + 1,
-            }).then(data => {
-                for (const update of data) {
-                    this._offset = Math.max(this._offset, update.update_id!)
-                    //console.log(update)
-                    this.telegram2onebot(update)
+    private ws() {
+        const socket = new WebSocket('wss://gateway.discord.gg/?v=10&encoding=json')
+        socket.addEventListener('open', () => {
+            if (this._sessionId) {
+                socket.send(JSON.stringify({
+                    op: DiscordType.GatewayOpcode.RESUME,
+                    d: {
+                        token: this.config.token,
+                        session_id: this._sessionId,
+                        seq: this._d,
+                    },
+                }))
+            }
+            this.change_online(true)
+        })
+        socket.addEventListener('message', (event) => {
+            const parsed: DiscordType.GatewayPayload = JSON.parse(event.data.toString())
+            if (parsed.s) {
+                this._d = parsed.s
+            }
+            if (parsed.op === DiscordType.GatewayOpcode.HELLO) {
+                this._ping = setInterval(() => {
+                    socket.send(JSON.stringify({
+                        op: DiscordType.GatewayOpcode.HEARTBEAT,
+                        d: this._d,
+                    }))
+                }, parsed.d!.heartbeat_interval)
+                if (this._sessionId) return
+                socket.send(JSON.stringify({
+                    op: DiscordType.GatewayOpcode.IDENTIFY,
+                    d: {
+                        token: this.config.token,
+                        properties: {
+                            os:Deno.osRelease
+                        },
+                        intents: 0
+                            | DiscordType.GatewayIntent.GUILD_MESSAGES
+                            | DiscordType.GatewayIntent.GUILD_MESSAGE_REACTIONS
+                            | DiscordType.GatewayIntent.DIRECT_MESSAGES
+                            | DiscordType.GatewayIntent.DIRECT_MESSAGE_REACTIONS
+                            | DiscordType.GatewayIntent.MESSAGE_CONTENT,
+                    },
+                }))
+            }
+
+            if (parsed.op === GatewayOpcode.DISPATCH) {
+                if (parsed.t === 'READY') {
+                    this._sessionId = parsed.d.session_id
+                    const self: any = adaptUser(parsed.d.user)
+                    self.selfId = self.userId
+                    delete self.userId
+                    Object.assign(this.bot, self)
+                    logger.debug('session_id ' + this._sessionId)
+                    return this.bot.online()
                 }
-                this.change_online(true)
-                get_updates()
-            }).catch(() => {
-                this.change_online(false)
-                setTimeout(get_updates, 500)
-            })
-        }
-        get_updates()
+                const session = await adaptSession(this.bot, parsed)
+                if (session) this.bot.dispatch(session)
+            }
+        })
+        socket.addEventListener('close', () => {
+            setTimeout(() => this.ws(), 500)
+        })
     }
     public start() {
         if (this.running) return
         const get_me = () => {
-            this.internal.getMe().then(data => {
+            this.internal.getCurrentUser().then(data => {
                 this.info = data
                 this.running = true
                 this.ob.start({
@@ -107,11 +152,8 @@ export class Telegram extends Adapter<TelegramConfig> {
                         impl: "teyda",
                     },
                     ...this.config.connect,
-                }, () => {
-                    return [this.eh.meta.connect(), this.eh.meta.statusUpdate()]
                 })
-                this.change_online(true)
-                this.polling()
+                this.ws()
             }).catch(() => {
                 setTimeout(get_me, 500)
             })
@@ -122,32 +164,6 @@ export class Telegram extends Adapter<TelegramConfig> {
         if (bool === this.online) return
         this.online = bool
         this.ob.send(this.eh.meta.statusUpdate())
-    }
-    private telegram2onebot(e: TelegramType.Update) {
-        if (e.message) {
-            if (e.message.text || e.message.location || e.message.photo || e.message.sticker || e.message.animation || e.message.voice || e.message.video || e.message.document || e.message.audio) {
-                let payload: Event | undefined
-                switch (e.message.chat?.type) {
-                    case 'private': {
-                        payload = this.eh.message.private(e.message)
-                        break
-                    }
-                    case 'supergroup':
-                    case 'group': {
-                        payload = this.eh.message.group(e.message)
-                        break
-                    }
-                }
-                payload && this.ob.send(payload)
-            } else if (e.message.new_chat_members) {
-                for (const member of e.message.new_chat_members) {
-                    this.ob.send(this.eh.notice.groupMemberIncrease(member, e.message.date!))
-                }
-            }
-        } else if (e.my_chat_member) {
-            const payload = e.my_chat_member.new_chat_member?.status === 'member' ? this.eh.notice.friendIncrease(e.my_chat_member) : this.eh.notice.friendDecrease(e.my_chat_member)
-            this.ob.send(payload)
-        }
     }
     public stop() {
         this.running = false
