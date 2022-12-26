@@ -5,3 +5,7 @@ export function uint8ArrayToHexString(digest: Uint8Array) {
 export function hexStringToArrayBuffer(hex: string): ArrayBuffer {
     return new Uint8Array(hex.match(/../g)!.map(h => parseInt(h, 16))).buffer
 }
+
+export function getTime(): number {
+    return new Date().getTime() / 1000
+}

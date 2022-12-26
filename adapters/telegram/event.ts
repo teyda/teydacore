@@ -5,6 +5,7 @@ import {
 } from '../../deps.ts'
 import { telegram2onebot } from './seg.ts'
 import { VERSION } from '../../version.ts'
+import { getTime } from '../../utils.ts'
 
 export class EventHandler {
     message
@@ -23,7 +24,7 @@ class Meta {
     statusUpdate(): Event {
         return {
             id: crypto.randomUUID(),
-            time: new Date().getTime() / 1000,
+            time: getTime(),
             type: 'meta',
             detail_type: 'status_update',
             sub_type: '',
@@ -42,7 +43,7 @@ class Meta {
     connect(): Event {
         return {
             id: crypto.randomUUID(),
-            time: new Date().getTime() / 1000,
+            time: getTime(),
             type: 'meta',
             detail_type: 'connect',
             sub_type: '',

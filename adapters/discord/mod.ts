@@ -24,7 +24,7 @@ export class Discord extends Adapter<DiscordConfig> {
     private _d = 0
     private _sessionId = ''
     private _ping: number | undefined
-    public readonly support_action = ['get_supported_actions', 'get_status', 'get_version', 'send_message', 'delete_message', 'get_self_info', 'get_user_info', 'get_group_info', 'get_group_member_info', 'set_group_name', 'leave_group', 'upload_file', 'upload_file_fragmented', 'get_file', 'get_file_fragmented']
+    public readonly support_action = ['get_supported_actions']
     private internal: DiscordType.Internal
     private ah: ActionHandler
     private eh: EventHandler
@@ -34,38 +34,10 @@ export class Discord extends Adapter<DiscordConfig> {
         this.internal = new DiscordType.Internal(`https://discord.com/api/v10`, config.token)
         this.ah = new ActionHandler(this, this.internal)
         this.eh = new EventHandler(this)
-        this.ob = new DnlibobApp(async (data, send_msgpack) => {
+        this.ob = new DnlibobApp((data, _send_msgpack) => {
             switch (data.action) {
                 case 'get_supported_actions':
                     return this.ah.getSupportedActions(data)
-                case 'get_status':
-                    return this.ah.getStatus(data)
-                case 'get_version':
-                    return this.ah.getVersion(data)
-                case 'send_message':
-                    return await this.ah.sendMessage(data)
-                case 'delete_message':
-                    return await this.ah.deleteMessage(data)
-                case 'get_self_info':
-                    return await this.ah.getSelfInfo(data)
-                case 'get_user_info':
-                    return await this.ah.getUserInfo(data)
-                case 'get_group_info':
-                    return await this.ah.getGroupInfo(data)
-                case 'get_group_member_info':
-                    return await this.ah.getGroupMemberInfo(data)
-                case 'set_group_name':
-                    return await this.ah.setGroupName(data)
-                case 'leave_group':
-                    return await this.ah.leaveGroup(data)
-                case 'upload_file':
-                    return await this.ah.uploadFile(data)
-                case 'upload_file_fragmented':
-                    return await this.ah.uploadFileFragmented(data)
-                case 'get_file':
-                    return await this.ah.getFile(data, send_msgpack)
-                case 'get_file_fragmented':
-                    return await this.ah.getFileFragmented(data, send_msgpack)
                 default:
                     return {
                         status: 'failed',
@@ -75,7 +47,7 @@ export class Discord extends Adapter<DiscordConfig> {
                         echo: data.echo,
                     }
             }
-        }, () => { this.ob.send(this.eh.meta.statusUpdate()) })
+        })
     }
     private ws() {
         const socket = new WebSocket('wss://gateway.discord.gg/?v=10&encoding=json')
@@ -90,10 +62,10 @@ export class Discord extends Adapter<DiscordConfig> {
                     },
                 }))
             }
-            this.change_online(true)
+            this.changeOnline(true)
         })
-        socket.addEventListener('message', (event) => {
-            const parsed: DiscordType.GatewayPayload = JSON.parse(event.data.toString())
+        socket.addEventListener('message', ({ data }) => {
+            const parsed: DiscordType.GatewayPayload = JSON.parse(data)
             if (parsed.s) {
                 this._d = parsed.s
             }
@@ -109,9 +81,7 @@ export class Discord extends Adapter<DiscordConfig> {
                     op: DiscordType.GatewayOpcode.IDENTIFY,
                     d: {
                         token: this.config.token,
-                        properties: {
-                            os:Deno.osRelease
-                        },
+                        properties: {},
                         intents: 0
                             | DiscordType.GatewayIntent.GUILD_MESSAGES
                             | DiscordType.GatewayIntent.GUILD_MESSAGE_REACTIONS
@@ -122,21 +92,17 @@ export class Discord extends Adapter<DiscordConfig> {
                 }))
             }
 
-            if (parsed.op === GatewayOpcode.DISPATCH) {
+            if (parsed.op === DiscordType.GatewayOpcode.DISPATCH) {
                 if (parsed.t === 'READY') {
-                    this._sessionId = parsed.d.session_id
-                    const self: any = adaptUser(parsed.d.user)
-                    self.selfId = self.userId
-                    delete self.userId
-                    Object.assign(this.bot, self)
-                    logger.debug('session_id ' + this._sessionId)
-                    return this.bot.online()
+                    this._sessionId = parsed.d!.session_id
+                    this.info = parsed.d!.user
+                    return this.changeOnline(true)
                 }
-                const session = await adaptSession(this.bot, parsed)
-                if (session) this.bot.dispatch(session)
+                this.dispatch(parsed)
             }
         })
         socket.addEventListener('close', () => {
+            clearInterval(this._ping)
             setTimeout(() => this.ws(), 500)
         })
     }
@@ -150,8 +116,12 @@ export class Discord extends Adapter<DiscordConfig> {
                     basic: {
                         onebot_version: '12',
                         impl: "teyda",
+                        platform: 'discord',
+                        user_id: data.id
                     },
                     ...this.config.connect,
+                }, () => {
+                    return [this.eh.meta.connect(), this.eh.meta.statusUpdate()]
                 })
                 this.ws()
             }).catch(() => {
@@ -160,7 +130,10 @@ export class Discord extends Adapter<DiscordConfig> {
         }
         get_me()
     }
-    private change_online(bool: boolean) {
+    private dispatch(e: DiscordType.GatewayPayload) {
+        console.log(e)
+    }
+    private changeOnline(bool: boolean) {
         if (bool === this.online) return
         this.online = bool
         this.ob.send(this.eh.meta.statusUpdate())

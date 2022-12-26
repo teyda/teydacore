@@ -1,5 +1,5 @@
 import { Adapter } from './adapter.ts'
-import { TelegramConfig, Telegram } from './adapters/mod.ts'
+import { TelegramConfig, Telegram, DiscordConfig, Discord } from './adapters/mod.ts'
 
 export class Teydacore {
     private adapters: Adapter[] = []
@@ -9,12 +9,17 @@ export class Teydacore {
                 this.adapters.push(new Telegram(item))
             }
         }
-        for (const item of this.adapters){
+        if (config.discord) {
+            for (const item of config.discord) {
+                this.adapters.push(new Discord(item))
+            }
+        }
+        for (const item of this.adapters) {
             item.start()
         }
     }
     public stop() {
-        for (const item of this.adapters){
+        for (const item of this.adapters) {
             item.stop()
         }
     }
@@ -22,4 +27,5 @@ export class Teydacore {
 
 export interface TeydacoreConfig {
     telegram?: TelegramConfig[]
+    discord?: DiscordConfig[]
 }

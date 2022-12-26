@@ -84,12 +84,12 @@ export class Telegram extends Adapter<TelegramConfig> {
                 for (const update of data) {
                     this._offset = Math.max(this._offset, update.update_id!)
                     //console.log(update)
-                    this.telegram2onebot(update)
+                    this.dispatch(update)
                 }
-                this.change_online(true)
+                this.changeOnline(true)
                 get_updates()
             }).catch(() => {
-                this.change_online(false)
+                this.changeOnline(false)
                 setTimeout(get_updates, 500)
             })
         }
@@ -105,12 +105,14 @@ export class Telegram extends Adapter<TelegramConfig> {
                     basic: {
                         onebot_version: '12',
                         impl: "teyda",
+                        platform: 'telegram',
+                        user_id: data.id?.toString()!
                     },
                     ...this.config.connect,
                 }, () => {
                     return [this.eh.meta.connect(), this.eh.meta.statusUpdate()]
                 })
-                this.change_online(true)
+                this.changeOnline(true)
                 this.polling()
             }).catch(() => {
                 setTimeout(get_me, 500)
@@ -118,12 +120,12 @@ export class Telegram extends Adapter<TelegramConfig> {
         }
         get_me()
     }
-    private change_online(bool: boolean) {
+    private changeOnline(bool: boolean) {
         if (bool === this.online) return
         this.online = bool
         this.ob.send(this.eh.meta.statusUpdate())
     }
-    private telegram2onebot(e: TelegramType.Update) {
+    private dispatch(e: TelegramType.Update) {
         if (e.message) {
             if (e.message.text || e.message.location || e.message.photo || e.message.sticker || e.message.animation || e.message.voice || e.message.video || e.message.document || e.message.audio) {
                 let payload: Event | undefined

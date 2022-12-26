@@ -18,7 +18,6 @@ export class ActionHandler {
     constructor(private tg: Telegram, private internal: TelegramType.Internal) {
     }
     getSupportedActions(data: Action): Resp {
-        if (data.action == 'send_message') { data.params.channel_id }
         return success_resp(Object.keys(this.tg.support_action), data.echo)
     }
     getStatus(data: Action): Resp {
