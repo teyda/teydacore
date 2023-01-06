@@ -25,7 +25,7 @@ declare module '../../deps.ts' {
     }
 }
 
-export function telegram2onebot(message: TelegramType.Message, info: TelegramType.User): Message {
+export function parse(message: TelegramType.Message, info: TelegramType.User): Message {
     const parseText = (text: string, entities: TelegramType.MessageEntity[]): Message => {
         let curr = 0
         const segs: Message = []
@@ -196,7 +196,7 @@ interface Payload {
     reply_to_message_id?: number
 }
 
-export async function onebot2telegram(segs: Message, internal: TelegramType.Internal): Promise<[Payload | FormData, Method]> {
+export async function stringify(segs: Message, internal: TelegramType.Internal): Promise<[Payload | FormData, Method]> {
     const payload: Payload = {}
     let offset = 0
     for (const seg of segs) {

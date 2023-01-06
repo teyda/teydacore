@@ -3,7 +3,7 @@ import * as TelegramType from './types/index.ts'
 import {
     Event
 } from '../../deps.ts'
-import { telegram2onebot } from './seg.ts'
+import { parse as segParse } from './seg.ts'
 import { VERSION } from '../../version.ts'
 import { getTime } from '../../utils.ts'
 
@@ -71,7 +71,7 @@ class Message {
             detail_type: 'private',
             sub_type: '',
             message_id: `${msg.chat?.id}/${msg.message_id}`,
-            message: telegram2onebot(msg, this.tg.info!),
+            message: segParse(msg, this.tg.info!),
             alt_message: msg.text!,
             user_id: msg.from?.id?.toString()!
         }
@@ -88,7 +88,7 @@ class Message {
             detail_type: 'group',
             sub_type: '',
             message_id: `${msg.chat?.id}/${msg.message_id}`,
-            message: telegram2onebot(msg, this.tg.info!),
+            message: segParse(msg, this.tg.info!),
             alt_message: msg.text!,
             user_id: msg.from?.id?.toString()!,
             group_id: msg.chat?.id?.toString()!

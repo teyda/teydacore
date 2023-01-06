@@ -9,7 +9,7 @@ import {
     extname
 } from '../../deps.ts'
 import * as TelegramType from './types/index.ts'
-import { onebot2telegram } from './seg.ts'
+import { stringify as segStringify } from './seg.ts'
 import { VERSION } from '../../version.ts'
 import { uint8ArrayToHexString } from '../../utils.ts'
 import { Telegram } from './mod.ts'
@@ -52,7 +52,7 @@ export class ActionHandler {
                 return default_fail_resp(data.echo)
         }
         try {
-            const [payload, method] = await onebot2telegram(data.params.message, this.internal)
+            const [payload, method] = await segStringify(data.params.message, this.internal)
             let all_payload
             if (payload instanceof FormData) {
                 payload.append('chat_id', chat_id)

@@ -9,7 +9,6 @@ import {
     extname
 } from '../../deps.ts'
 import * as DiscordType from './types/index.ts'
-import { onebot2telegram } from './seg.ts'
 import { VERSION } from '../../version.ts'
 import { uint8ArrayToHexString } from '../../utils.ts'
 import { Discord } from './mod.ts'
@@ -19,6 +18,25 @@ export class ActionHandler {
     }
     getSupportedActions(data: Action): Resp {
         return success_resp(Object.keys(this.dc.support_action), data.echo)
+    }
+    getStatus(data: Action): Resp {
+        return success_resp({
+            good: this.dc.online && this.dc.running,
+            bots: [{
+                self: {
+                    platform: 'discord',
+                    user_id: this.dc.info?.id!
+                },
+                online: this.dc.online
+            }]
+        }, data.echo)
+    }
+    getVersion(data: Action): Resp {
+        return success_resp({
+            impl: 'teyda',
+            version: VERSION,
+            onebot_version: '12'
+        }, data.echo)
     }
 }
 

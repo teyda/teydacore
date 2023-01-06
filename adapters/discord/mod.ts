@@ -24,7 +24,7 @@ export class Discord extends Adapter<DiscordConfig> {
     private _d = 0
     private _sessionId = ''
     private _ping: number | undefined
-    public readonly support_action = ['get_supported_actions']
+    public readonly support_action = ['get_supported_actions', 'get_status', 'get_version']
     private internal: DiscordType.Internal
     private ah: ActionHandler
     private eh: EventHandler
@@ -38,6 +38,10 @@ export class Discord extends Adapter<DiscordConfig> {
             switch (data.action) {
                 case 'get_supported_actions':
                     return this.ah.getSupportedActions(data)
+                case 'get_status':
+                    return this.ah.getStatus(data)
+                case 'get_version':
+                    return this.ah.getVersion(data)
                 default:
                     return {
                         status: 'failed',
@@ -61,11 +65,12 @@ export class Discord extends Adapter<DiscordConfig> {
                         seq: this._d,
                     },
                 }))
+                this.changeOnline(true)
             }
-            this.changeOnline(true)
         })
         socket.addEventListener('message', ({ data }) => {
             const parsed: DiscordType.GatewayPayload = JSON.parse(data)
+            console.log(parsed)
             if (parsed.s) {
                 this._d = parsed.s
             }
@@ -91,7 +96,6 @@ export class Discord extends Adapter<DiscordConfig> {
                     },
                 }))
             }
-
             if (parsed.op === DiscordType.GatewayOpcode.DISPATCH) {
                 if (parsed.t === 'READY') {
                     this._sessionId = parsed.d!.session_id
@@ -103,7 +107,8 @@ export class Discord extends Adapter<DiscordConfig> {
         })
         socket.addEventListener('close', () => {
             clearInterval(this._ping)
-            setTimeout(() => this.ws(), 500)
+            this.changeOnline(false)
+            setTimeout(() => { this.ws() }, 500)
         })
     }
     public start() {
