@@ -25,7 +25,7 @@ export class ActionHandler {
             good: this.tg.online && this.tg.running,
             bots: [{
                 self: {
-                    platform: 'telegram',
+                    platform: this.tg.platform,
                     user_id: this.tg.info?.id?.toString()!
                 },
                 online: this.tg.online
@@ -258,9 +258,9 @@ export class ActionHandler {
                             sha256,
                             url: `data:${contentType(target[1])};base64,${base64Encode(file_data.buffer)}`
                         }, data.echo)
-                    } else if (target[0] === 'tg') {
+                    } else {
                         const result = await this.internal.getFile({
-                            file_id: target[1]
+                            file_id: target[0]
                         })
                         const file = await fetch(`https://api.telegram.org/file/bot${this.tg.config.token}/${result.file_path}`)
                         const file_data = await file.arrayBuffer()
@@ -273,12 +273,24 @@ export class ActionHandler {
                             url: `data:${contentType(name)};base64,${base64Encode(file_data)}`
                         }, data.echo)
                     }
-                    break
                 }
                 case 'path': {
-                    if (target[0] === 'tg') {
+                    if (target[0] === 'td') {
+                        const file_info = await Deno.lstat(`./teyda_data/${target[1]}`)
+                        if (!file_info.isFile) {
+                            return empty_fail_resp(32002, 'file_id 错误', data.echo)
+                        }
+                        const file_data = await Deno.readFile(`./teyda_data/${target[1]}`)
+                        const digest = await crypto.subtle.digest("SHA-256", file_data.buffer)
+                        const sha256 = uint8ArrayToHexString(new Uint8Array(digest))
+                        return success_resp({
+                            name: target[1],
+                            sha256,
+                            path: await Deno.realPath(`./teyda_data/${target[1]}`)
+                        }, data.echo)
+                    } else {
                         const result = await this.internal.getFile({
-                            file_id: target[1]
+                            file_id: target[0]
                         })
                         const file = await fetch(`https://api.telegram.org/file/bot${this.tg.config.token}/${result.file_path}`)
                         const file_data = await file.arrayBuffer()
@@ -292,37 +304,10 @@ export class ActionHandler {
                             sha256,
                             path: await Deno.realPath(`./teyda_data/${name}`)
                         }, data.echo)
-                    } else if (target[0] === 'td') {
-                        const file_info = await Deno.lstat(`./teyda_data/${target[1]}`)
-                        if (!file_info.isFile) {
-                            return empty_fail_resp(32002, 'file_id 错误', data.echo)
-                        }
-                        const file_data = await Deno.readFile(`./teyda_data/${target[1]}`)
-                        const digest = await crypto.subtle.digest("SHA-256", file_data.buffer)
-                        const sha256 = uint8ArrayToHexString(new Uint8Array(digest))
-                        return success_resp({
-                            name: target[1],
-                            sha256,
-                            path: await Deno.realPath(`./teyda_data/${target[1]}`)
-                        }, data.echo)
                     }
-                    break
                 }
                 case 'data': {
-                    if (target[0] === 'tg') {
-                        const result = await this.internal.getFile({
-                            file_id: target[1]
-                        })
-                        const file = await fetch(`https://api.telegram.org/file/bot${this.tg.config.token}/${result.file_path}`)
-                        const file_data = await file.arrayBuffer()
-                        const digest = await crypto.subtle.digest("SHA-256", file_data)
-                        const sha256 = uint8ArrayToHexString(new Uint8Array(digest))
-                        return success_resp({
-                            name: basename(result.file_path!),
-                            data: send_msgpack ? file_data : base64Encode(file_data),
-                            sha256
-                        }, data.echo)
-                    } else if (target[0] === 'td') {
+                    if (target[0] === 'td') {
                         const file_info = await Deno.lstat(`./teyda_data/${target[1]}`)
                         if (!file_info.isFile) {
                             return empty_fail_resp(32002, 'file_id 错误', data.echo)
@@ -335,13 +320,24 @@ export class ActionHandler {
                             data: send_msgpack ? file_data.buffer : base64Encode(file_data.buffer),
                             sha256
                         }, data.echo)
+                    } else {
+                        const result = await this.internal.getFile({
+                            file_id: target[0]
+                        })
+                        const file = await fetch(`https://api.telegram.org/file/bot${this.tg.config.token}/${result.file_path}`)
+                        const file_data = await file.arrayBuffer()
+                        const digest = await crypto.subtle.digest("SHA-256", file_data)
+                        const sha256 = uint8ArrayToHexString(new Uint8Array(digest))
+                        return success_resp({
+                            name: basename(result.file_path!),
+                            data: send_msgpack ? file_data : base64Encode(file_data),
+                            sha256
+                        }, data.echo)
                     }
-                    break
                 }
                 default:
                     return default_fail_resp(data.echo)
             }
-            return empty_fail_resp(32002, 'file_id 错误', data.echo)
         } catch {
             return default_fail_resp(data.echo)
         }
@@ -351,7 +347,20 @@ export class ActionHandler {
             const target = data.params.file_id.split('/')
             switch (data.params.stage) {
                 case 'prepare':
-                    if (target[0] === 'tg') {
+                    if (target[0] === 'td') {
+                        const file_info = await Deno.lstat(`./teyda_data/${target[1]}`)
+                        if (!file_info.isFile) {
+                            return empty_fail_resp(32002, 'file_id 错误', data.echo)
+                        }
+                        const file_data = await Deno.readFile(`./teyda_data/${target[1]}`)
+                        const digest = await crypto.subtle.digest("SHA-256", file_data.buffer)
+                        const sha256 = uint8ArrayToHexString(new Uint8Array(digest))
+                        return success_resp({
+                            name: target[1],
+                            sha256,
+                            total_size: file_info.size
+                        }, data.echo)
+                    }else{
                         const result = await this.internal.getFile({
                             file_id: target[1]
                         })
@@ -367,21 +376,7 @@ export class ActionHandler {
                             total_size: file_info.size,
                             sha256
                         }, data.echo)
-                    } else if (target[0] === 'td') {
-                        const file_info = await Deno.lstat(`./teyda_data/${target[1]}`)
-                        if (!file_info.isFile) {
-                            return empty_fail_resp(32002, 'file_id 错误', data.echo)
-                        }
-                        const file_data = await Deno.readFile(`./teyda_data/${target[1]}`)
-                        const digest = await crypto.subtle.digest("SHA-256", file_data.buffer)
-                        const sha256 = uint8ArrayToHexString(new Uint8Array(digest))
-                        return success_resp({
-                            name: target[1],
-                            sha256,
-                            total_size: file_info.size
-                        }, data.echo)
                     }
-                    break
                 case 'transfer': {
                     const file_info = await Deno.lstat(`./teyda_data/${target[1]}`)
                     if (!file_info.isFile) {
@@ -399,7 +394,6 @@ export class ActionHandler {
                 default:
                     return default_fail_resp(data.echo)
             }
-            return empty_fail_resp(32002, 'file_id 错误', data.echo)
         } catch {
             return default_fail_resp(data.echo)
         }

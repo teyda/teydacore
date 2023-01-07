@@ -29,6 +29,7 @@ export class Discord extends Adapter<DiscordConfig> {
     private ah: ActionHandler
     private eh: EventHandler
     public info: DiscordType.User | undefined
+    public readonly platform = 'discord'
     constructor(config: DiscordConfig) {
         super(config)
         this.internal = new DiscordType.Internal(`https://discord.com/api/v10`, config.token)
@@ -70,7 +71,6 @@ export class Discord extends Adapter<DiscordConfig> {
         })
         socket.addEventListener('message', ({ data }) => {
             const parsed: DiscordType.GatewayPayload = JSON.parse(data)
-            console.log(parsed)
             if (parsed.s) {
                 this._d = parsed.s
             }
@@ -121,7 +121,7 @@ export class Discord extends Adapter<DiscordConfig> {
                     basic: {
                         onebot_version: '12',
                         impl: "teyda",
-                        platform: 'discord',
+                        platform: this.platform,
                         user_id: data.id
                     },
                     ...this.config.connect,
@@ -135,8 +135,27 @@ export class Discord extends Adapter<DiscordConfig> {
         }
         get_me()
     }
-    private dispatch(e: DiscordType.GatewayPayload) {
-        console.log(e)
+    private dispatch(data: DiscordType.GatewayPayload) {
+        let event: Event | undefined
+        //console.log(data)
+        switch (data.t) {
+            case 'MESSAGE_CREATE': {
+                if (data.d?.guild_id) {
+                    switch (data.d?.type) {
+                        case DiscordType.Message.Type.DEFAULT: {
+                            event = this.eh.message.channel(data.d!)
+                        }
+                    }
+                } else {
+                    switch (data.d?.type) {
+                        case DiscordType.Message.Type.DEFAULT: {
+                            event = this.eh.message.private(data.d!)
+                        }
+                    }
+                }
+            }
+        }
+        event && this.ob.send(event)
     }
     private changeOnline(bool: boolean) {
         if (bool === this.online) return

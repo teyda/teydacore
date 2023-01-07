@@ -2,11 +2,6 @@ import {
     Action,
     Resp,
     ensureDir,
-    base64Decode,
-    contentType,
-    base64Encode,
-    basename,
-    extname
 } from '../../deps.ts'
 import * as DiscordType from './types/index.ts'
 import { VERSION } from '../../version.ts'
@@ -24,7 +19,7 @@ export class ActionHandler {
             good: this.dc.online && this.dc.running,
             bots: [{
                 self: {
-                    platform: 'discord',
+                    platform: this.dc.platform,
                     user_id: this.dc.info?.id!
                 },
                 online: this.dc.online

@@ -32,7 +32,7 @@ class Meta {
                 good: this.tg.online && this.tg.running,
                 bots: [{
                     self: {
-                        platform: 'telegram',
+                        platform: this.tg.platform,
                         user_id: this.tg.info?.id?.toString()!
                     },
                     online: this.tg.online
@@ -63,7 +63,7 @@ class Message {
         return {
             id: crypto.randomUUID(),
             self: {
-                platform: 'telegram',
+                platform: this.tg.platform,
                 user_id: this.tg.info?.id?.toString()!
             },
             time: msg.date!,
@@ -80,7 +80,7 @@ class Message {
         return {
             id: crypto.randomUUID(),
             self: {
-                platform: 'telegram',
+                platform: this.tg.platform,
                 user_id: this.tg.info?.id?.toString()!
             },
             time: msg.date!,
@@ -103,7 +103,7 @@ class Notice {
         return {
             id: crypto.randomUUID(),
             self: {
-                platform: 'telegram',
+                platform: this.tg.platform,
                 user_id: this.tg.info?.id?.toString()!
             },
             time: cmu.date!,
@@ -117,7 +117,7 @@ class Notice {
         return {
             id: crypto.randomUUID(),
             self: {
-                platform: 'telegram',
+                platform: this.tg.platform,
                 user_id: this.tg.info?.id?.toString()!
             },
             time: cmu.date!,
@@ -131,7 +131,7 @@ class Notice {
         return {
             id: crypto.randomUUID(),
             self: {
-                platform: 'telegram',
+                platform: this.tg.platform,
                 user_id: this.tg.info?.id?.toString()!
             },
             time: time,

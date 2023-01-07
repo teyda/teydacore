@@ -27,6 +27,7 @@ export class Telegram extends Adapter<TelegramConfig> {
     private ah: ActionHandler
     private eh: EventHandler
     public info: TelegramType.User | undefined
+    public readonly platform = 'telegram'
     constructor(config: TelegramConfig) {
         super(config)
         this.internal = new TelegramType.Internal(`https://api.telegram.org/bot${this.config.token}`)
@@ -105,7 +106,7 @@ export class Telegram extends Adapter<TelegramConfig> {
                     basic: {
                         onebot_version: '12',
                         impl: "teyda",
-                        platform: 'telegram',
+                        platform: this.platform,
                         user_id: data.id?.toString()!
                     },
                     ...this.config.connect,
